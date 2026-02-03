@@ -1,14 +1,16 @@
+import dynamic from "next/dynamic";
 import { Header } from "@/components/Header";
 import { HeroSection } from "@/components/HeroSection";
 import { TrustBar } from "@/components/TrustBar";
-import { QuizSection } from "@/components/QuizSection";
-import { FeaturesSection } from "@/components/FeaturesSection";
-import { HowItWorksSection } from "@/components/HowItWorksSection";
-import { BeforeAfterSection } from "@/components/BeforeAfterSection";
-import { ChatbotSection } from "@/components/ChatbotSection";
-import { PricingSection } from "@/components/PricingSection";
-import { TestimonialsSection } from "@/components/TestimonialsSection";
-import { Footer } from "@/components/Footer";
+
+const QuizSection = dynamic(() => import("@/components/QuizSection").then((m) => ({ default: m.QuizSection })), { ssr: true });
+const FeaturesSection = dynamic(() => import("@/components/FeaturesSection").then((m) => ({ default: m.FeaturesSection })), { ssr: true });
+const HowItWorksSection = dynamic(() => import("@/components/HowItWorksSection").then((m) => ({ default: m.HowItWorksSection })), { ssr: true });
+const BeforeAfterSection = dynamic(() => import("@/components/BeforeAfterSection").then((m) => ({ default: m.BeforeAfterSection })), { ssr: true });
+const ChatbotSection = dynamic(() => import("@/components/ChatbotSection").then((m) => ({ default: m.ChatbotSection })), { ssr: true });
+const PricingSection = dynamic(() => import("@/components/PricingSection").then((m) => ({ default: m.PricingSection })), { ssr: true });
+const TestimonialsSection = dynamic(() => import("@/components/TestimonialsSection").then((m) => ({ default: m.TestimonialsSection })), { ssr: true });
+const Footer = dynamic(() => import("@/components/Footer").then((m) => ({ default: m.Footer })), { ssr: true });
 
 export default function Home() {
   return (

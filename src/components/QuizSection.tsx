@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import { Button } from "./ui/button";
 import { ChevronRight, ChevronLeft, Sparkles } from "lucide-react";
 
@@ -160,12 +161,13 @@ export const QuizSection = () => {
                         }`}
                     >
                       {option.image ? (
-                        <div className="aspect-video w-full overflow-hidden">
-                          <img
-                            src={typeof option.image === "string" ? option.image : (option.image as { src: string })?.src}
+                        <div className="aspect-video w-full overflow-hidden relative">
+                          <Image
+                            src={option.image as { src: string; width: number; height: number }}
                             alt={option.label}
-                            className={`w-full h-full object-cover transition-transform duration-700 ${selectedOption === option.label ? "scale-110" : "group-hover:scale-105"
-                              }`}
+                            fill
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                            className={`object-cover transition-transform duration-700 ${selectedOption === option.label ? "scale-110" : "group-hover:scale-105"}`}
                           />
                           <div className={`absolute inset-0 bg-gradient-to-t from-secondary via-secondary/20 to-transparent opacity-60`} />
                         </div>

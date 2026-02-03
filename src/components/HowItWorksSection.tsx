@@ -1,5 +1,6 @@
 "use client";
 import { motion } from "framer-motion";
+import Image from "next/image";
 import phoneMockup from "@/assets/phone-mockup.png";
 import { Check } from "lucide-react";
 import { Button } from "./ui/button";
@@ -123,10 +124,13 @@ export const HowItWorksSection = () => {
                 <div className={index % 2 === 1 ? "lg:order-1" : "lg:order-2"}>
                   <figure className="relative flex flex-col items-center group">
                     <div className="relative w-full max-w-sm">
-                      <img
-                        src={typeof phoneMockup === "string" ? phoneMockup : phoneMockup.src}
+                      <Image
+                        src={phoneMockup}
                         alt={`Step ${step.number}: ${step.title} — ${step.screenshotLabel}`}
+                        width={phoneMockup.width}
+                        height={phoneMockup.height}
                         className="w-full h-auto rounded-[3rem] shadow-2xl relative z-10 transition-transform duration-500 group-hover:scale-[1.02]"
+                        sizes="(max-width: 384px) 100vw, 384px"
                       />
                       <div
                         className="absolute inset-0 z-0 blur-3xl opacity-25 bg-primary/40 rounded-full scale-90 transition-transform duration-500 group-hover:scale-105"
