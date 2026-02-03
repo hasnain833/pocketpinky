@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# Next.js build output (do not push)
+.next/
+
+# Environment (keep .env.example; do not commit secrets)
+.env
+.env.local
+.env.*.local
+
 # Vite cache (transpiled config etc.)
 vite.config.ts.timestamp-*.mjs
 *.timestamp-*.mjs
