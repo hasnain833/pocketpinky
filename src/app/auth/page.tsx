@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,7 +11,27 @@ import heroWoman from "@/assets/hero-woman.jpg";
 import signupImage from "@/assets/swriling_couple_1770109529730.png";
 import Image from "next/image";
 
-export default function AuthPage() {
+function AuthPageFallback() {
+  return (
+    <div className="min-h-screen bg-secondary flex items-center justify-center" aria-busy="true" aria-label="Loading">
+      <div className="relative w-14 h-14">
+        <div className="absolute inset-0 rounded-full border-2 border-primary/30" />
+        <motion.div
+          className="absolute inset-0 rounded-full border-2 border-transparent border-t-primary border-r-primary"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+        />
+        <motion.div
+          className="absolute inset-1 rounded-full border-2 border-transparent border-b-primary border-l-gold"
+          animate={{ rotate: -360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function AuthPageContent() {
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [mounted, setMounted] = useState(false);
@@ -210,5 +230,13 @@ export default function AuthPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={<AuthPageFallback />}>
+      <AuthPageContent />
+    </Suspense>
   );
 }
