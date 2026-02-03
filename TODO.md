@@ -13,8 +13,8 @@ Remaining tasks for the website (from Vetting App Launch brief). Mobile app and 
 
 - [ ] **Google Analytics 4** — Add GA4 script/tag to the site (e.g. in root layout or via next/script).
 - [ ] **Email capture (quiz)** — Integrate Constant Contact (or equivalent) to capture email on quiz completion.
-- [ ] **Account page** — Create `/account` or `/my-account`: show current plan, renewal date, “Manage Subscription” (Stripe Customer Portal), guide download links (if Premium), newsletter toggle, contact link.
-- [ ] **Footer links** — Add “My Account” link; replace placeholder `#` with real URLs for Terms, Privacy, Contact.
+- [x] **Account page** — Create `/account` or `/my-account`: show current plan, renewal date, “Manage Subscription” (Stripe Customer Portal), guide download links (if Premium), newsletter toggle, contact link.
+- [x] **Footer links** — Add “My Account” link; replace placeholder `#` with real URLs for Terms, Privacy, Contact.
 - [x] **Performance** — Lazy loading for below-fold content, image optimization (e.g. next/image), aim for page load under 3 seconds.
 
 ## Low priority

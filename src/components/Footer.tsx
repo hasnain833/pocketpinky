@@ -1,9 +1,12 @@
 "use client";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { Instagram, Twitter, Facebook, Mail } from "lucide-react";
 
-const appStoreUrl = "https://apps.apple.com/app/pocket-pinky/id000000000";
-const playStoreUrl = "https://play.google.com/store/apps/details?id=com.pocketpinky.app";
+const appStoreUrl =
+  process.env.NEXT_PUBLIC_APP_STORE_URL || "https://apps.apple.com/app/pocket-pinky/id000000000";
+const playStoreUrl =
+  process.env.NEXT_PUBLIC_PLAY_STORE_URL || "https://play.google.com/store/apps/details?id=com.pocketpinky.app";
 
 const socialLinks = [
   { icon: Instagram, href: "#", label: "Instagram" },
@@ -13,9 +16,10 @@ const socialLinks = [
 ];
 
 const legalLinks = [
-  { name: "Terms", href: "#" },
-  { name: "Privacy", href: "#" },
-  { name: "Contact", href: "#" },
+  { name: "My Account", href: "/account" },
+  { name: "Terms", href: "/terms" },
+  { name: "Privacy", href: "/privacy" },
+  { name: "Contact", href: "/contact" },
 ];
 
 export const Footer = () => {
@@ -55,13 +59,13 @@ export const Footer = () => {
           {/* Terms, Privacy, Contact */}
           <nav className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-1 text-sm" aria-label="Footer">
             {legalLinks.map((link) => (
-              <a
+              <Link
                 key={link.name}
                 href={link.href}
                 className="text-cream/50 hover:text-gold transition-colors duration-300"
               >
                 {link.name}
-              </a>
+              </Link>
             ))}
           </nav>
 

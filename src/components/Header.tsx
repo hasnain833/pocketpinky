@@ -4,14 +4,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { Button } from "./ui/button";
 
-const navLinks = [
-  { name: "Home", href: "#hero" },
-  { name: "Features", href: "#features" },
-  { name: "How It Works", href: "#how-it-works" },
-  { name: "Pricing", href: "#pricing" },
-  { name: "Testimonials", href: "#testimonials" },
-];
-
 export const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -43,22 +35,14 @@ export const Header = () => {
       <header className="absolute top-0 left-0 right-0 z-50 w-full transition-all duration-300 bg-transparent border-b border-transparent">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <a href="#hero" className="flex items-center gap-2 shrink-0 group">
+            <a href="/" className="flex items-center gap-2 shrink-0 group">
               <span className="font-script text-5xl text-gold transition-transform duration-300 group-hover:scale-105">Pinky</span>
             </a>
 
-            <div className="hidden md:flex items-center gap-8">
-              <nav className="flex items-center gap-8 mr-4">
-                {navLinks.map((link) => (
-                  <a
-                    key={link.name}
-                    href={link.href}
-                    className="text-cream/70 hover:text-gold transition-colors font-medium text-sm uppercase tracking-widest"
-                  >
-                    {link.name}
-                  </a>
-                ))}
-              </nav>
+            <div className="hidden md:flex items-center gap-3">
+              <Button variant="ghost" size="lg" asChild className="rounded-xl text-cream/90 hover:text-gold hover:bg-cream/5">
+                <a href="/auth">Log in / Sign up</a>
+              </Button>
               <Button variant="hero" size="lg" asChild className="rounded-xl shadow-gold/20 shadow-lg">
                 <a href="#pricing">Get Started</a>
               </Button>
@@ -88,22 +72,14 @@ export const Header = () => {
           >
             <div className="container mx-auto px-6 py-3">
               <div className="flex items-center justify-between">
-                <a href="#hero" className="flex items-center gap-2 shrink-0 group">
+                <a href="/" className="flex items-center gap-2 shrink-0 group">
                   <span className="font-script text-4xl text-gold transition-transform duration-300 group-hover:scale-105">Pinky</span>
                 </a>
 
-                <div className="hidden md:flex items-center gap-8">
-                  <nav className="flex items-center gap-6 mr-2">
-                    {navLinks.map((link) => (
-                      <a
-                        key={link.name}
-                        href={link.href}
-                        className="text-cream/80 hover:text-gold transition-colors font-medium text-xs uppercase tracking-widest"
-                      >
-                        {link.name}
-                      </a>
-                    ))}
-                  </nav>
+                <div className="hidden md:flex items-center gap-3">
+                  <Button variant="ghost" size="lg" asChild className="rounded-xl text-cream/90 hover:text-gold hover:bg-cream/5">
+                    <a href="/auth">Log in / Sign up</a>
+                  </Button>
                   <Button variant="hero" size="sm" asChild className="rounded-lg shadow-gold/20">
                     <a href="#pricing">Get Started</a>
                   </Button>
@@ -137,19 +113,9 @@ export const Header = () => {
             >
               <X size={32} />
             </button>
-            <nav className="flex flex-col items-center gap-8">
-              {navLinks.map((link) => (
-                <a
-                  key={link.name}
-                  href={link.href}
-                  onClick={() => setIsMenuOpen(false)}
-                  className="text-cream text-3xl font-serif hover:text-gold transition-colors"
-                >
-                  {link.name}
-                </a>
-              ))}
-              <Button variant="hero" size="xl" className="mt-4" asChild>
-                <a href="#pricing" onClick={() => setIsMenuOpen(false)}>Get Started</a>
+            <nav className="flex flex-col items-center gap-6">
+              <Button variant="hero" size="xl" className="text-cream hover:text-gold" asChild>
+                <a href="/auth" onClick={() => setIsMenuOpen(false)}>Log in / Sign up</a>
               </Button>
             </nav>
           </motion.div>

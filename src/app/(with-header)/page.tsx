@@ -1,5 +1,4 @@
 import dynamic from "next/dynamic";
-import { Header } from "@/components/Header";
 import { HeroSection } from "@/components/HeroSection";
 import { TrustBar } from "@/components/TrustBar";
 
@@ -15,7 +14,6 @@ const Footer = dynamic(() => import("@/components/Footer").then((m) => ({ defaul
 export default function Home() {
   return (
     <div className="min-h-screen overflow-x-hidden w-full">
-      <Header />
       <HeroSection />
       <TrustBar />
       <QuizSection />
