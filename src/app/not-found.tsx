@@ -30,11 +30,11 @@ export default function NotFound() {
             Back to Home
           </Link>
           <Link
-            href="/auth"
+            href="/"
             className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-gold/40 text-gold px-8 py-4 font-semibold hover:bg-gold/10 hover:border-gold/60 transition-all duration-300"
           >
-            <MessageCircle className="w-5 h-5" />
-            Log in / Sign up
+            <Home className="w-5 h-5" />
+            Go to Homepage
           </Link>
         </div>
 

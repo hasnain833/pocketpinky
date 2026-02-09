@@ -1,28 +1,54 @@
-import dynamic from "next/dynamic";
 import { HeroSection } from "@/components/HeroSection";
-import { TrustBar } from "@/components/TrustBar";
-
-const QuizSection = dynamic(() => import("@/components/QuizSection").then((m) => ({ default: m.QuizSection })), { ssr: true });
-const FeaturesSection = dynamic(() => import("@/components/FeaturesSection").then((m) => ({ default: m.FeaturesSection })), { ssr: true });
-const HowItWorksSection = dynamic(() => import("@/components/HowItWorksSection").then((m) => ({ default: m.HowItWorksSection })), { ssr: true });
-const BeforeAfterSection = dynamic(() => import("@/components/BeforeAfterSection").then((m) => ({ default: m.BeforeAfterSection })), { ssr: true });
-const ChatbotSection = dynamic(() => import("@/components/ChatbotSection").then((m) => ({ default: m.ChatbotSection })), { ssr: true });
-const PricingSection = dynamic(() => import("@/components/PricingSection").then((m) => ({ default: m.PricingSection })), { ssr: true });
-const TestimonialsSection = dynamic(() => import("@/components/TestimonialsSection").then((m) => ({ default: m.TestimonialsSection })), { ssr: true });
-const Footer = dynamic(() => import("@/components/Footer").then((m) => ({ default: m.Footer })), { ssr: true });
+import { AuthorityStrip } from "@/components/AuthorityStrip";
+import { WhoSection } from "@/components/WhoSection";
+import { ModesSection } from "@/components/ModesSection";
+import { UnlockSection } from "@/components/UnlockSection";
+import { VoiceSection } from "@/components/VoiceSection";
+import { CreatorSection } from "@/components/CreatorSection";
+import { PricingSection } from "@/components/PricingSection";
+import { MethodSection } from "@/components/MethodSection";
+import { FinalCTA } from "@/components/FinalCTA";
+import { Footer } from "@/components/Footer";
+import { ScrollReveal } from "@/components/ScrollReveal";
 
 export default function Home() {
   return (
     <div className="min-h-screen overflow-x-hidden w-full">
       <HeroSection />
-      <TrustBar />
-      <QuizSection />
-      <FeaturesSection />
-      <HowItWorksSection />
-      <BeforeAfterSection />
-      <ChatbotSection />
       <PricingSection />
-      <TestimonialsSection />
+
+      <ScrollReveal>
+        <AuthorityStrip />
+      </ScrollReveal>
+
+      <ScrollReveal>
+        <WhoSection />
+      </ScrollReveal>
+
+      <ScrollReveal>
+        <ModesSection />
+      </ScrollReveal>
+
+      <ScrollReveal>
+        <UnlockSection />
+      </ScrollReveal>
+
+      <ScrollReveal>
+        <VoiceSection />
+      </ScrollReveal>
+
+      <ScrollReveal>
+        <CreatorSection />
+      </ScrollReveal>
+
+      <ScrollReveal>
+        <MethodSection />
+      </ScrollReveal>
+
+      <ScrollReveal>
+        <FinalCTA />
+      </ScrollReveal>
+
       <Footer />
     </div>
   );

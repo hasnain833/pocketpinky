@@ -1,126 +1,176 @@
 "use client";
 import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X } from "lucide-react";
-import { Button } from "./ui/button";
+import { Menu, X, LogOut, User } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import type { User as AuthUser } from "@supabase/supabase-js";
+import { AuthModal } from "./AuthModal";
+import { AccountModal } from "./AccountModal";
 
 export const Header = () => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [heroHeight, setHeroHeight] = useState(0);
+  const [authModal, setAuthModal] = useState<{ isOpen: boolean; mode: "login" | "signup" }>({
+    isOpen: false,
+    mode: "login"
+  });
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
 
   useEffect(() => {
-    const updateHeroHeight = () => {
-      const hero = document.getElementById("hero");
-      if (hero) setHeroHeight(hero.offsetHeight);
-    };
-    updateHeroHeight();
-    window.addEventListener("resize", updateHeroHeight);
-    return () => window.removeEventListener("resize", updateHeroHeight);
+    const supabase = createClient();
+    if (!supabase) {
+      setUser(null);
+      return;
+    }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const threshold = heroHeight > 0 ? heroHeight : window.innerHeight - 80;
-      setIsScrolled(window.scrollY >= threshold);
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll();
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [heroHeight]);
+  async function handleSignOut() {
+    setIsMenuOpen(false);
+    setIsAccountModalOpen(false);
+    setUser(null);
+    const supabase = createClient();
+    if (supabase) await supabase.auth.signOut();
+    router.push("/");
+    router.refresh();
+  }
 
   return (
     <>
-      {/* Initial Absolute Header (Scrolls away) */}
-      <header className="absolute top-0 left-0 right-0 z-50 w-full transition-all duration-300 bg-transparent border-b border-transparent">
-        <div className="container mx-auto px-6 py-4">
+      <header className="fixed top-0 left-0 right-0 z-10 w-full bg-[hsl(var(--cream))]/95 backdrop-blur-[20px] border-b border-[hsl(var(--divider))] transition-all duration-300">
+        <div className="max-w-[1300px] mx-auto px-[5%] py-4 md:py-6">
           <div className="flex items-center justify-between">
-            <a href="/" className="flex items-center gap-2 shrink-0 group">
-              <span className="font-script text-5xl text-gold transition-transform duration-300 group-hover:scale-105">Pinky</span>
-            </a>
+            {/* Logo */}
+            <Link href="/" className="font-serif text-[1.6rem] font-semibold text-[hsl(var(--charcoal))] tracking-[0.5px]">
+              The <span className="text-[hsl(var(--pink-accent))]">Pink Pill</span>
+            </Link>
 
-            <div className="hidden md:flex items-center gap-3">
-              <Button variant="ghost" size="lg" asChild className="rounded-xl text-cream/90 hover:text-gold hover:bg-cream/5">
-                <a href="/auth">Log in / Sign up</a>
-              </Button>
-              <Button variant="hero" size="lg" asChild className="rounded-xl shadow-gold/20 shadow-lg">
-                <a href="#pricing">Get Started</a>
-              </Button>
+            {/* Desktop Nav */}
+            <div className="hidden md:flex items-center gap-12">
+              <nav className="flex items-center gap-10">
+                <a href="#modes" className="text-[hsl(var(--text-secondary))] text-xs font-semibold tracking-[0.5px] uppercase hover:text-[hsl(var(--pink-accent))] transition-colors">
+                  What She Does
+                </a>
+                <a href="#pricing" className="text-[hsl(var(--text-secondary))] text-xs font-semibold tracking-[0.5px] uppercase hover:text-[hsl(var(--pink-accent))] transition-colors">
+                  Pricing
+                </a>
+              </nav>
+
+              <div className="flex items-center gap-4">
+                {user ? (
+                  <button
+                    onClick={() => setIsAccountModalOpen(true)}
+                    className="bg-[hsl(var(--charcoal))] text-[hsl(var(--cream))] px-7 py-3 text-xs font-semibold tracking-[0.5px] uppercase rounded-sm hover:bg-[hsl(var(--wine))] transition-colors"
+                  >
+                    Account
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setAuthModal({ isOpen: true, mode: "signup" })}
+                      className="bg-[hsl(var(--charcoal))] text-[hsl(var(--cream))] px-7 py-3 text-xs font-semibold tracking-[0.5px] uppercase rounded-sm hover:bg-[hsl(var(--wine))] transition-colors"
+                    >
+                      Try Pinky Free
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
 
+            {/* Mobile Menu Button */}
             <button
               type="button"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden text-cream p-2 rounded-lg hover:bg-cream/10 transition-colors"
+              className="md:hidden text-[hsl(var(--charcoal))] p-2"
               aria-label={isMenuOpen ? "Close menu" : "Open menu"}
             >
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
         </div>
+
+        {/* Mobile Menu */}
+        <AnimatePresence>
+          {isMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="absolute top-full left-0 right-0 bg-white border-b border-[hsl(var(--divider))] p-6 flex flex-col gap-6 md:hidden shadow-xl"
+            >
+              <nav className="flex flex-col gap-4">
+                <a
+                  href="#modes"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="text-[hsl(var(--text-secondary))] text-sm font-semibold tracking-[0.5px] uppercase"
+                >
+                  What She Does
+                </a>
+                <a
+                  href="#pricing"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="text-[hsl(var(--text-secondary))] text-sm font-semibold tracking-[0.5px] uppercase"
+                >
+                  Pricing
+                </a>
+                {user ? (
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      setIsAccountModalOpen(true);
+                    }}
+                    className="bg-[hsl(var(--charcoal))] text-[hsl(var(--cream))] px-7 py-4 text-sm font-semibold tracking-[0.5px] uppercase rounded-sm text-center"
+                  >
+                    Account
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      setAuthModal({ isOpen: true, mode: "login" });
+                    }}
+                    className="text-left text-[hsl(var(--text-secondary))] text-sm font-semibold tracking-[0.5px] uppercase"
+                  >
+                    Log in / Sign up
+                  </button>
+                )}
+              </nav>
+              {!user && (
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setAuthModal({ isOpen: true, mode: "signup" });
+                  }}
+                  className="bg-[hsl(var(--charcoal))] text-[hsl(var(--cream))] px-7 py-4 text-sm font-semibold tracking-[0.5px] uppercase rounded-sm text-center"
+                >
+                  Try Pinky Free
+                </button>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
-      {/* Sticky Header (Slides in after scroll) */}
-      <AnimatePresence>
-        {isScrolled && (
-          <motion.header
-            initial={{ y: -100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -100, opacity: 0 }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed top-0 left-0 right-0 z-[60] w-full bg-secondary/95 backdrop-blur-md border-b border-cream/10 shadow-xl"
-          >
-            <div className="container mx-auto px-6 py-3">
-              <div className="flex items-center justify-between">
-                <a href="/" className="flex items-center gap-2 shrink-0 group">
-                  <span className="font-script text-4xl text-gold transition-transform duration-300 group-hover:scale-105">Pinky</span>
-                </a>
-
-                <div className="hidden md:flex items-center gap-3">
-                  <Button variant="ghost" size="lg" asChild className="rounded-xl text-cream/90 hover:text-gold hover:bg-cream/5">
-                    <a href="/auth">Log in / Sign up</a>
-                  </Button>
-                  <Button variant="hero" size="sm" asChild className="rounded-lg shadow-gold/20">
-                    <a href="#pricing">Get Started</a>
-                  </Button>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setIsMenuOpen(!isMenuOpen)}
-                  className="md:hidden text-cream p-1 rounded-md hover:bg-cream/10"
-                >
-                  {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
-                </button>
-              </div>
-            </div>
-          </motion.header>
-        )}
-      </AnimatePresence>
-
-      {/* Mobile Menu (Shared or separate depending on implementation needs) */}
-      <AnimatePresence>
-        {isMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed inset-0 z-[100] md:hidden bg-secondary/98 backdrop-blur-xl p-6 flex flex-col justify-center items-center"
-          >
-            <button
-              onClick={() => setIsMenuOpen(false)}
-              className="absolute top-6 right-6 text-cream"
-            >
-              <X size={32} />
-            </button>
-            <nav className="flex flex-col items-center gap-6">
-              <Button variant="hero" size="xl" className="text-cream hover:text-gold" asChild>
-                <a href="/auth" onClick={() => setIsMenuOpen(false)}>Log in / Sign up</a>
-              </Button>
-            </nav>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <AuthModal
+        isOpen={authModal.isOpen}
+        onClose={() => setAuthModal({ ...authModal, isOpen: false })}
+        initialMode={authModal.mode}
+      />
+      <AccountModal
+        isOpen={isAccountModalOpen}
+        onClose={() => setIsAccountModalOpen(false)}
+        onSignOut={handleSignOut}
+      />
     </>
   );
 };

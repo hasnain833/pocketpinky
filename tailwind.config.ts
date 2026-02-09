@@ -17,6 +17,7 @@ export default {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
+        divider: "hsl(var(--divider))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
@@ -50,18 +51,26 @@ export default {
         gold: {
           DEFAULT: "hsl(var(--gold))",
           foreground: "hsl(var(--gold-foreground))",
+          light: "hsl(var(--gold-light))",
+          pale: "hsl(var(--gold-pale))",
         },
-        plum: {
-          DEFAULT: "hsl(270, 34%, 17%)",
-          light: "hsl(270, 30%, 25%)",
-          dark: "hsl(270, 40%, 12%)",
+        charcoal: {
+          DEFAULT: "hsl(var(--charcoal))",
         },
         cream: {
-          DEFAULT: "hsl(30, 25%, 96%)",
-          dark: "hsl(30, 20%, 90%)",
+          DEFAULT: "hsl(var(--cream))",
+          dark: "hsl(var(--cream-dark))",
         },
-        coral: {
-          DEFAULT: "hsl(0, 100%, 71%)",
+        pink: {
+          soft: "hsl(var(--pink-soft))",
+          accent: "hsl(var(--pink-accent))",
+          deep: "hsl(var(--pink-deep))",
+        },
+        wine: {
+          DEFAULT: "hsl(var(--wine))",
+        },
+        blush: {
+          DEFAULT: "hsl(var(--blush))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
@@ -82,9 +91,8 @@ export default {
         "2xl": "1.5rem",
       },
       fontFamily: {
-        sans: ["Inter", "sans-serif"],
-        serif: ["Playfair Display", "serif"],
-        script: ["Great Vibes", "cursive"],
+        sans: ["Montserrat", "sans-serif"],
+        serif: ["Cormorant Garamond", "serif"],
       },
       keyframes: {
         "accordion-down": {
@@ -95,48 +103,18 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
-        "fade-in": {
-          from: { opacity: "0", transform: "translateY(20px)" },
-          to: { opacity: "1", transform: "translateY(0)" },
-        },
-        "fade-in-up": {
-          from: { opacity: "0", transform: "translateY(40px)" },
-          to: { opacity: "1", transform: "translateY(0)" },
-        },
-        "scale-in": {
-          from: { opacity: "0", transform: "scale(0.95)" },
-          to: { opacity: "1", transform: "scale(1)" },
-        },
-        shimmer: {
-          from: { backgroundPosition: "200% 0" },
-          to: { backgroundPosition: "-200% 0" },
-        },
-        float: {
-          "0%, 100%": { transform: "translateY(0)" },
-          "50%": { transform: "translateY(-10px)" },
-        },
-        "glow-pulse": {
-          "0%, 100%": { boxShadow: "0 0 20px hsla(328, 100%, 54%, 0.3)" },
-          "50%": { boxShadow: "0 0 40px hsla(328, 100%, 54%, 0.5)" },
-        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "fade-in": "fade-in 0.6s ease-out forwards",
-        "fade-in-up": "fade-in-up 0.8s ease-out forwards",
-        "scale-in": "scale-in 0.5s ease-out forwards",
-        shimmer: "shimmer 3s ease-in-out infinite",
-        float: "float 3s ease-in-out infinite",
-        "glow-pulse": "glow-pulse 2s ease-in-out infinite",
       },
       backgroundImage: {
-        "hero-gradient": "linear-gradient(135deg, hsl(270, 34%, 17%) 0%, hsl(328, 50%, 25%) 100%)",
-        "cta-gradient": "linear-gradient(135deg, hsl(328, 100%, 54%) 0%, hsl(0, 100%, 71%) 100%)",
-        "gold-gradient": "linear-gradient(135deg, hsl(43, 56%, 52%) 0%, hsl(43, 70%, 65%) 100%)",
-        "dark-gradient": "linear-gradient(180deg, hsl(270, 34%, 17%) 0%, hsl(270, 40%, 12%) 100%)",
+        "pink-gradient": "var(--gradient-pink)",
+        "gold-gradient": "var(--gradient-gold)",
+        "dark-gradient": "var(--gradient-dark)",
       },
     },
   },
   plugins: [require("tailwindcss-animate")],
 } satisfies Config;
+

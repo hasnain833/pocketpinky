@@ -24,6 +24,9 @@ dist-ssr
 vite.config.ts.timestamp-*.mjs
 *.timestamp-*.mjs
 
+# Design / reference docs (do not track)
+Vetting App Launch (1).pdf
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
