@@ -48,7 +48,7 @@ export const Header = () => {
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-50 w-full bg-[hsl(var(--cream))]/95 backdrop-blur-[20px] border-b border-[hsl(var(--divider))] transition-all duration-300">
-        <div className="max-w-[1300px] mx-auto px-[5%] py-4 md:py-6">
+        <div className="max-w-[1300px] mx-auto px-[5%] py-3 md:py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link href="/" className="font-serif text-[1.6rem] font-semibold text-[hsl(var(--charcoal))] tracking-[0.5px]">
