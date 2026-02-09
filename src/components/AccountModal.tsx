@@ -108,42 +108,6 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
 
                                 {/* Content & Newsletter */}
                                 <div className="grid grid-cols-1 gap-3">
-                                    {/* Resources Section */}
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-2 text-[11px] font-semibold text-[hsl(var(--charcoal))] uppercase tracking-wide">
-                                            <FileText className="w-3.5 h-3.5 text-[hsl(var(--gold))]" />
-                                            Premium Guides
-                                        </div>
-                                        <div className="bg-white border border-[hsl(var(--divider))] rounded-lg divide-y divide-[hsl(var(--divider))]">
-                                            <a
-                                                href="/49-patterns-field-guide.pdf"
-                                                target="_blank"
-                                                className="flex items-center justify-between p-2 hover:bg-[hsl(var(--cream))] transition-colors group"
-                                            >
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-7 h-7 rounded bg-[hsl(var(--blush))] flex items-center justify-center text-[hsl(var(--pink-accent))]">
-                                                        <Download size={14} />
-                                                    </div>
-                                                    <span className="text-xs font-medium text-[hsl(var(--charcoal))]">49 Patterns Field Guide</span>
-                                                </div>
-                                                <ExternalLink size={12} className="text-[hsl(var(--text-muted))] group-hover:text-[hsl(var(--gold))]" />
-                                            </a>
-                                            <a
-                                                href="/swirling-success-guide-v2.pdf"
-                                                target="_blank"
-                                                className="flex items-center justify-between p-2 hover:bg-[hsl(var(--cream))] transition-colors group"
-                                            >
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-7 h-7 rounded bg-[hsl(var(--gold-pale))] flex items-center justify-center text-[hsl(var(--gold))]">
-                                                        <Download size={14} />
-                                                    </div>
-                                                    <span className="text-xs font-medium text-[hsl(var(--charcoal))]">Swirling Success Guide</span>
-                                                </div>
-                                                <ExternalLink size={12} className="text-[hsl(var(--text-muted))] group-hover:text-[hsl(var(--gold))]" />
-                                            </a>
-                                        </div>
-                                    </div>
-
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-2 text-[11px] font-semibold text-[hsl(var(--charcoal))] uppercase tracking-wide">
                                             <Bell className="w-3.5 h-3.5 text-[hsl(var(--gold))]" />
