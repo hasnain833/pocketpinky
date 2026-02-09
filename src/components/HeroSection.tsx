@@ -28,7 +28,7 @@ export const HeroSection = () => {
   };
 
   return (
-    <section className="min-h-screen flex items-center py-40 px-[5%] bg-[hsl(var(--cream))] relative overflow-hidden">
+    <section className="min-h-screen flex items-center pt-32 pb-20 px-[5%] bg-[hsl(var(--cream))] relative overflow-hidden">
       {/* Background Decor */}
       <motion.div
         initial={{ opacity: 0, scale: 0.8 }}
@@ -93,7 +93,7 @@ export const HeroSection = () => {
             {/* Animated Glow behind phone */}
             <div className="absolute -inset-1 bg-gradient-to-r from-[hsl(var(--pink-accent))] to-[hsl(var(--gold))] rounded-[45px] blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
 
-            <div className="bg-white rounded-[32px] overflow-hidden min-h-[580px] transition-transform duration-500 group-hover:scale-[1.02]">
+            <div className="bg-white rounded-[32px] overflow-hidden min-h-[550px] transition-transform duration-500 group-hover:scale-[1.02]">
               {/* Phone Header */}
               <div className="bg-gradient-to-br from-[hsl(var(--pink-accent))] to-[hsl(var(--wine))] p-5 text-center">
                 <h4 className="text-white text-base font-semibold font-sans">💕 Pinky</h4>

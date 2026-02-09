@@ -47,7 +47,7 @@ export const Header = () => {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-10 w-full bg-[hsl(var(--cream))]/95 backdrop-blur-[20px] border-b border-[hsl(var(--divider))] transition-all duration-300">
+      <header className="fixed top-0 left-0 right-0 z-50 w-full bg-[hsl(var(--cream))]/95 backdrop-blur-[20px] border-b border-[hsl(var(--divider))] transition-all duration-300">
         <div className="max-w-[1300px] mx-auto px-[5%] py-4 md:py-6">
           <div className="flex items-center justify-between">
             {/* Logo */}
@@ -108,54 +108,46 @@ export const Header = () => {
               exit={{ opacity: 0, y: -20 }}
               className="absolute top-full left-0 right-0 bg-white border-b border-[hsl(var(--divider))] p-6 flex flex-col gap-6 md:hidden shadow-xl"
             >
-              <nav className="flex flex-col gap-4">
+              <nav className="flex flex-col gap-5">
                 <a
                   href="#modes"
                   onClick={() => setIsMenuOpen(false)}
-                  className="text-[hsl(var(--text-secondary))] text-sm font-semibold tracking-[0.5px] uppercase"
+                  className="text-[hsl(var(--text-secondary))] text-xs font-semibold tracking-[0.5px] uppercase"
                 >
                   What She Does
                 </a>
                 <a
                   href="#pricing"
                   onClick={() => setIsMenuOpen(false)}
-                  className="text-[hsl(var(--text-secondary))] text-sm font-semibold tracking-[0.5px] uppercase"
+                  className="text-[hsl(var(--text-secondary))] text-xs font-semibold tracking-[0.5px] uppercase"
                 >
                   Pricing
                 </a>
-                {user ? (
-                  <button
-                    onClick={() => {
-                      setIsMenuOpen(false);
-                      setIsAccountModalOpen(true);
-                    }}
-                    className="bg-[hsl(var(--charcoal))] text-[hsl(var(--cream))] px-7 py-4 text-sm font-semibold tracking-[0.5px] uppercase rounded-sm text-center"
-                  >
-                    Account
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setIsMenuOpen(false);
-                      setAuthModal({ isOpen: true, mode: "login" });
-                    }}
-                    className="text-left text-[hsl(var(--text-secondary))] text-sm font-semibold tracking-[0.5px] uppercase"
-                  >
-                    Log in / Sign up
-                  </button>
-                )}
+
+                <div className="pt-2">
+                  {user ? (
+                    <button
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        setIsAccountModalOpen(true);
+                      }}
+                      className="w-full bg-[hsl(var(--charcoal))] text-[hsl(var(--cream))] px-7 py-4 text-xs font-semibold tracking-[0.5px] uppercase rounded-sm text-center"
+                    >
+                      Account
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        setAuthModal({ isOpen: true, mode: "signup" });
+                      }}
+                      className="w-full bg-[hsl(var(--charcoal))] text-[hsl(var(--cream))] px-7 py-4 text-xs font-semibold tracking-[0.5px] uppercase rounded-sm text-center"
+                    >
+                      Try Pinky Free
+                    </button>
+                  )}
+                </div>
               </nav>
-              {!user && (
-                <button
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    setAuthModal({ isOpen: true, mode: "signup" });
-                  }}
-                  className="bg-[hsl(var(--charcoal))] text-[hsl(var(--cream))] px-7 py-4 text-sm font-semibold tracking-[0.5px] uppercase rounded-sm text-center"
-                >
-                  Try Pinky Free
-                </button>
-              )}
             </motion.div>
           )}
         </AnimatePresence>

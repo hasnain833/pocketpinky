@@ -127,7 +127,7 @@ export const PricingSection = () => {
                     initial={{ opacity: 0, scale: 0.8 }}
                     whileInView={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.5 }}
-                    className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[hsl(var(--gold))] text-[hsl(var(--charcoal))] text-[0.65rem] font-semibold tracking-wide uppercase px-4 py-1.5 rounded-sm"
+                    className="absolute -top-3 inset-x-0 mx-auto w-fit bg-[hsl(var(--gold))] text-[hsl(var(--charcoal))] text-[0.65rem] font-semibold tracking-wide uppercase px-4 py-1.5 rounded-sm z-20"
                   >
                     Most Popular
                   </motion.div>

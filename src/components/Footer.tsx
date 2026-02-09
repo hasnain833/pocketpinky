@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export const Footer = () => {
   return (
-    <footer className="bg-[hsl(var(--charcoal))] py-12 text-center">
+    <footer className="bg-[hsl(var(--charcoal))] py-12 text-center border-t border-[hsl(var(--cream))]">
       <div className="max-w-[1200px] mx-auto px-[5%]">
         {/* Logo */}
         <div className="font-serif text-2xl text-[hsl(var(--cream))] mb-6">

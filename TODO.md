@@ -6,41 +6,41 @@ Remaining tasks for the website (from Vetting App Launch brief). Mobile app and 
 
 ## High priority
 
-- [ ] **Embed Botpress chat widget** — Add Botpress embed code in `ChatbotSection.tsx` (Section 7). Widget should be visible and styled to match brand. Currently a placeholder (CTA only).
 - [ ] **Stripe payment links** — Connect pricing CTAs (Free Trial, Basic, Premium) in `PricingSection.tsx` to real Stripe payment/checkout links. Currently: logged-in users are scrolled to `#chatbot`; logged-out users see login dialog.
+- [/] **Embed Botpress chat widget** — Move from static links to a full floating widget integration. Need `NEXT_PUBLIC_BOTPRESS_CLIENT_ID` for `inject.js` implementation.
 
 ## Low priority
 
-- [ ] **Footer real links** — Update social links (Instagram, Twitter, Facebook, Mail) from `#` to final URLs; App Store / Google Play use env vars and can be updated when URLs are available.
+- [ ] **Footer real links** — Update social links (Instagram, Twitter, Facebook, Mail) from `#` to final URLs.
 
 ---
 
 ## Done (reference)
 
+**Premium UI & UX**
+- **Animation System**: Created reusable `ScrollReveal` system with custom editorial easing. Staggered reveals for Hero, Pricing, and Unlock sections.
+- **Performance**: Integrated `ScrollArea` into `AccountModal` to handle content overflow and improve mobile accessibility.
+- **Vertical Compactness**: Refined `AccountModal` and `AuthModal` for better fit on small screens.
+- **Spacing Optimization**: Fixed excessive gap between fixed header and hero content; resolved z-index layering conflicts.
+- **Responsive Alignment**: Centered `CreatorSection` on mobile; standardized mobile navigation menu labels and buttons to match desktop.
+- **Public Resources**: Relocated "49 Patterns" and "Swirling Success" PDF guides to the site footer for public access.
+
 **Pages & structure**
-- Hero, Trust Bar, Quiz, Features, How It Works, Before/After, Pricing UI, Testimonials, Footer layout
+- Hero, Trust Bar, Features, How It Works, Before/After, Pricing UI, Testimonials, Footer layout
 - Next.js App Router, responsive design, sticky header, design system
-- `/account` — plan, renewal date, Manage Subscription (Stripe portal URL via env), guide download links (Premium), newsletter toggle, contact link
-- `/auth` — login/signup with Supabase; form validation; password rules (length, capital, special); eye toggles; smooth mode switch
+- `/account` — plan, renewal date, Manage Subscription (Stripe portal URL via env), newsletter toggle, contact link
+- `/auth` — login/signup with Supabase; form validation; eye toggles; smooth mode switch
 - `/terms`, `/privacy`, `/contact` — created and linked from footer
 - `/not-found` — branded 404
-- Footer: My Account, Terms, Privacy, Contact linked to real routes
+- Footer: My Account, Terms, Privacy, Contact linked to real routes; top-border added for visual separation
 
 **Auth (Supabase)**
-- Supabase client (browser + server), middleware session refresh
-- Auth page: sign up, sign in, errors, redirect to `/account` — **email captured at signup** (no separate quiz email capture needed)
-- Header: auth state (Account + Log out when logged in; Log in / Sign up when not)
-- Account page: protected; redirect to `/auth` when not logged in
-- Logout: from homepage → full refresh; from other pages → redirect to homepage
-- Quiz: login required to proceed past question 1; login dialog with link to `/auth`
-- Pricing: login required to subscribe; login dialog with link to `/auth`
+- Supabase client, middleware session refresh, protected routes
+- Auth page converted to `AuthModal` for smoother flow (email captured at signup)
+- Header: auth state (Account + Log out when logged in; "Try Pinky Free" when not)
+- Pricing: login required to subscribe; integrated with `AuthModal`
 
 **Performance & config**
 - Lazy loading (dynamic imports) for below-fold sections, `next/image` for images
-- Google Analytics 4 — gtag in root layout via `next/script` (optional; set `NEXT_PUBLIC_GA_MEASUREMENT_ID` to enable)
-- `.env.example` — Supabase URL/key, Stripe portal, GA4, contact email, app store URLs
-- `.gitignore` — .next, env files, PDF reference doc
-
-**Build & fixes**
-- NavLink and Vitest fixes for Next.js build
-- Auth page: Suspense boundary for `useSearchParams` (build fix)
+- Google Analytics 4 integration (`NEXT_PUBLIC_GA_MEASUREMENT_ID`)
+- `.env.example`, `.gitignore`, and build fixes for Next.js consistency
