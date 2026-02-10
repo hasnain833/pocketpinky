@@ -5,13 +5,18 @@ import Stripe from "stripe";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2026-01-28.clover",
-});
-
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || process.env.NEXT_PUBLIC_STRIPE_WEBHOOK_SECRET;
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || process.env.NEXT_PUBLIC_STRIPE_WEBHOOK_SECRET;
+
+    if (!process.env.STRIPE_SECRET_KEY) {
+        return NextResponse.json({ error: "Stripe secret key not configured" }, { status: 500 });
+    }
+
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+        apiVersion: "2026-01-28.clover",
+    });
     const body = await req.text();
     const sig = headers().get("stripe-signature");
 

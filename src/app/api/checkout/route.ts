@@ -1,11 +1,7 @@
+export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-
-// Initialize Stripe with the secret key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2026-01-28.clover", // Use latest API version or valid one
-});
 
 const PRICES = {
     patterns: {
@@ -36,6 +32,14 @@ const PRICES = {
 
 export async function POST(req: Request) {
     try {
+        if (!process.env.STRIPE_SECRET_KEY) {
+            return NextResponse.json({ error: "Stripe secret key not configured" }, { status: 500 });
+        }
+
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+            apiVersion: "2026-01-28.clover",
+        });
+
         const { productId, userId, userEmail } = await req.json();
 
         if (!productId || !PRICES[productId as keyof typeof PRICES]) {

@@ -3,12 +3,18 @@ import Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2026-01-28.clover",
-});
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
     try {
+        if (!process.env.STRIPE_SECRET_KEY) {
+            return NextResponse.json({ error: "Stripe secret key not configured" }, { status: 500 });
+        }
+
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+            apiVersion: "2026-01-28.clover",
+        });
+
         // Get authenticated user
         const supabase = await createClient();
         const { data: { session } } = await supabase.auth.getSession();

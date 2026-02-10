@@ -4,10 +4,7 @@ import Stripe from "stripe";
 import fs from "fs";
 import path from "path";
 
-// Initialize Stripe with the secret key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2026-01-28.clover",
-});
+export const dynamic = "force-dynamic";
 
 const FILES = {
     patterns: "49-patterns-field-guide.pdf",
@@ -16,6 +13,14 @@ const FILES = {
 
 export async function GET(req: Request) {
     try {
+        if (!process.env.STRIPE_SECRET_KEY) {
+            return NextResponse.json({ error: "Stripe secret key not configured" }, { status: 500 });
+        }
+
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+            apiVersion: "2026-01-28.clover",
+        });
+
         const { searchParams } = new URL(req.url);
         const sessionId = searchParams.get("session_id");
         const fileKey = searchParams.get("file");
