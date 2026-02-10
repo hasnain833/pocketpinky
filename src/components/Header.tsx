@@ -29,10 +29,22 @@ export const Header = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.refreshSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
     });
-    return () => subscription.unsubscribe();
+
+    // Listen for global auth modal triggers
+    const handleOpenAuth = (e: any) => {
+      const mode = e.detail?.mode || "login";
+      setAuthModal({ isOpen: true, mode });
+    };
+
+    window.addEventListener('open-auth-modal', handleOpenAuth);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('open-auth-modal', handleOpenAuth);
+    };
   }, []);
 
   async function handleSignOut() {
@@ -41,8 +53,7 @@ export const Header = () => {
     setUser(null);
     const supabase = createClient();
     if (supabase) await supabase.auth.signOut();
-    router.push("/");
-    router.refresh();
+    window.location.href = "/";
   }
 
   return (
@@ -61,9 +72,9 @@ export const Header = () => {
                 <a href="#modes" className="text-[hsl(var(--text-secondary))] text-xs font-semibold tracking-[0.5px] uppercase hover:text-[hsl(var(--pink-accent))] transition-colors">
                   What She Does
                 </a>
-                <a href="#pricing" className="text-[hsl(var(--text-secondary))] text-xs font-semibold tracking-[0.5px] uppercase hover:text-[hsl(var(--pink-accent))] transition-colors">
-                  Pricing
-                </a>
+                <Link href="/guides" className="text-[hsl(var(--text-secondary))] text-xs font-semibold tracking-[0.5px] uppercase hover:text-[hsl(var(--pink-accent))] transition-colors">
+                  Guides
+                </Link>
               </nav>
 
               <div className="flex items-center gap-4">
@@ -116,14 +127,13 @@ export const Header = () => {
                 >
                   What She Does
                 </a>
-                <a
-                  href="#pricing"
+                <Link
+                  href="/guides"
                   onClick={() => setIsMenuOpen(false)}
                   className="text-[hsl(var(--text-secondary))] text-xs font-semibold tracking-[0.5px] uppercase"
                 >
-                  Pricing
-                </a>
-
+                  Guides
+                </Link>
                 <div className="pt-2">
                   {user ? (
                     <button

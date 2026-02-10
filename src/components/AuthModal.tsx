@@ -83,7 +83,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = "login" }: AuthModalP
                     setMessage("Check your email for the confirmation link.");
                 } else {
                     onClose();
-                    router.refresh();
+                    window.location.reload();
                 }
             } else {
                 const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -92,7 +92,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = "login" }: AuthModalP
                 });
                 if (signInError) throw signInError;
                 onClose();
-                router.refresh();
+                window.location.reload();
             }
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : "Something went wrong.");

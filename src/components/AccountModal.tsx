@@ -32,13 +32,10 @@ interface AccountModalProps {
 export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) => {
     const [loading, setLoading] = useState(true);
     const [userEmail, setUserEmail] = useState<string | null>(null);
+    const [plan, setPlan] = useState<string>("Free");
+    const [subscriptionStatus, setSubscriptionStatus] = useState<string>("active");
+    const [subscriptionEnd, setSubscriptionEnd] = useState<number | null>(null);
     const [newsletterSubscribed, setNewsletterSubscribed] = useState(true);
-
-    // Placeholder data - in a real app this would come from a subscription hook or Stripe API
-    const plan = "Free";
-    const status = "Active";
-    const renewalDate = "—";
-    const hasPremiumGuides = false;
 
     useEffect(() => {
         if (!isOpen) return;
@@ -46,13 +43,44 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
         const supabase = createClient();
         if (!supabase) return;
 
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        // Force refresh session to get latest metadata from server
+        supabase.auth.refreshSession().then(({ data: { session } }) => {
             if (session?.user) {
                 setUserEmail(session.user.email ?? null);
+
+                // Fetch plan and subscription details from metadata
+                const userPlan = session.user.app_metadata?.plan || session.user.user_metadata?.plan || "free";
+                setPlan(userPlan === "premium" ? "Premium" : "Free");
+
+                const status = session.user.app_metadata?.subscription_status || "active";
+                setSubscriptionStatus(status);
+
+                const end = session.user.app_metadata?.subscription_end;
+                setSubscriptionEnd(end);
             }
             setLoading(false);
         });
     }, [isOpen]);
+
+    // Determine display status
+    const getStatusDisplay = () => {
+        if (plan === "Free") return { text: "Active", color: "text-green-600" };
+
+        if (subscriptionEnd) {
+            const now = Math.floor(Date.now() / 1000);
+            if (now > subscriptionEnd) {
+                return { text: "Expired", color: "text-red-600" };
+            }
+        }
+
+        if (subscriptionStatus === "active") return { text: "Active", color: "text-green-600" };
+        if (subscriptionStatus === "canceled") return { text: "Cancelled", color: "text-orange-600" };
+        if (subscriptionStatus === "past_due") return { text: "Past Due", color: "text-red-600" };
+
+        return { text: "Active", color: "text-green-600" };
+    };
+
+    const statusDisplay = getStatusDisplay();
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -91,7 +119,7 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
                                         </div>
                                         <div className="flex justify-between p-2.5">
                                             <span className="text-[hsl(var(--text-secondary))]">Status</span>
-                                            <span className="text-green-600 font-medium">{status}</span>
+                                            <span className={`font-medium ${statusDisplay.color}`}>{statusDisplay.text}</span>
                                         </div>
                                     </div>
                                     <Button variant="heroOutline" size="sm" className="w-full text-[10px] h-8 border-[hsl(var(--charcoal))] text-[hsl(var(--charcoal))] hover:bg-[hsl(var(--charcoal))] hover:text-white" asChild>

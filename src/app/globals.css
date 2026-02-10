@@ -228,6 +228,10 @@
   .btn-secondary {
     @apply inline-block bg-transparent text-charcoal px-9 py-4 text-sm font-semibold tracking-wide uppercase border border-charcoal rounded-sm transition-all duration-300 hover:bg-charcoal hover:text-cream;
   }
+
+  .btn-wine {
+    @apply inline-block bg-wine text-cream px-9 py-4 text-sm font-semibold tracking-wide uppercase rounded-sm transition-all duration-300 hover:bg-[#5C252C] hover:-translate-y-0.5 shadow-soft hover:shadow-glow;
+  }
 }
 
 @layer utilities {

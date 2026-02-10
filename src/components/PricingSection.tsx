@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { AuthModal } from "./AuthModal";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { ScrollReveal } from "./ScrollReveal";
 
 export const PricingSection = () => {
@@ -13,23 +14,143 @@ export const PricingSection = () => {
     mode: "signup"
   });
 
-  const chatbotUrl = "https://cdn.botpress.cloud/webchat/v3.5/shareable.html?configUrl=https://files.bpcontent.cloud/2025/12/22/20/20251222201454-LHAZEGXE.json";
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+    isDestructive?: boolean;
+  }>({ isOpen: false, title: "", description: "", onConfirm: () => { } });
 
   useEffect(() => {
     const supabase = createClient();
-    supabase?.auth.getSession().then(({ data: { session } }) => {
+    // Force refresh session to get latest metadata from server
+    supabase?.auth.refreshSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+
+      // Check if user has Premium
+      if (session?.user) {
+        const plan = session.user.app_metadata?.plan || session.user.user_metadata?.plan;
+        const status = session.user.app_metadata?.subscription_status;
+
+        const isActive = plan === 'premium';
+        setIsPremium(isActive);
+        setSubscriptionStatus(status);
+      }
     });
     const { data: { subscription } } = supabase?.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+
+      // Update Premium status on auth change
+      if (session?.user) {
+        const plan = session.user.app_metadata?.plan || session.user.user_metadata?.plan;
+        const status = session.user.app_metadata?.subscription_status;
+
+        const isActive = plan === 'premium';
+        setIsPremium(isActive);
+        setSubscriptionStatus(status);
+      } else {
+        setIsPremium(false);
+        setSubscriptionStatus(null);
+      }
     }) || { data: { subscription: { unsubscribe: () => { } } } };
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleCtaClick = (e: React.MouseEvent, featured: boolean) => {
-    if (featured && !user) {
-      e.preventDefault();
+  const handleCtaClick = async (e: React.MouseEvent, planName: string) => {
+    e.preventDefault();
+
+    if (!user) {
       setAuthModal({ isOpen: true, mode: "signup" });
+      return;
+    }
+
+    if (planName === "Free") {
+      window.dispatchEvent(new CustomEvent('open-pinky-chat'));
+    } else if (isPremium) {
+      // Handle cancellation for Premium users
+      setConfirmDialog({
+        isOpen: true,
+        title: "Cancel Subscription?",
+        description: "Are you sure you want to cancel your Premium subscription? You will lose access to premium features immediately.",
+        isDestructive: true,
+        onConfirm: async () => {
+          setIsCheckingOut(true);
+          try {
+            const response = await fetch("/api/cancel-subscription", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            });
+
+            const data = await response.json();
+            if (data.success) {
+              // Update state immediately for instant feedback
+              setIsPremium(false);
+              setSubscriptionStatus("canceled");
+              setIsCheckingOut(false);
+
+              setConfirmDialog({
+                isOpen: true,
+                title: "Subscription Cancelled",
+                description: data.message,
+                onConfirm: () => {
+                  setConfirmDialog({ ...confirmDialog, isOpen: false });
+                },
+              });
+            } else {
+              console.error("Cancellation error:", data.error);
+              setConfirmDialog({
+                isOpen: true,
+                title: "Cancellation Failed",
+                description: "Failed to cancel subscription. Please try again.",
+                onConfirm: () => { },
+              });
+              setIsCheckingOut(false);
+            }
+          } catch (error) {
+            console.error("Cancellation error:", error);
+            setConfirmDialog({
+              isOpen: true,
+              title: "Cancellation Failed",
+              description: "Failed to cancel subscription. Please try again.",
+              onConfirm: () => { },
+            });
+            setIsCheckingOut(false);
+          }
+        },
+      });
+    } else {
+      // Handle checkout for non-Premium users
+      setIsCheckingOut(true);
+      try {
+        const response = await fetch("/api/checkout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            productId: "premium",
+            userId: user.id,
+            userEmail: user.email
+          }),
+        });
+
+        const data = await response.json();
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          console.error("Checkout error:", data.error);
+          setIsCheckingOut(false);
+        }
+      } catch (error) {
+        console.error("Checkout error:", error);
+        setIsCheckingOut(false);
+      }
     }
   };
 
@@ -161,15 +282,22 @@ export const PricingSection = () => {
                   ))}
                 </ul>
 
-                <a
-                  href={chatbotUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => handleCtaClick(e, plan.featured)}
-                  className={plan.featured ? 'btn-primary w-full text-center' : 'btn-secondary w-full text-center'}
+                <button
+                  onClick={(e) => handleCtaClick(e, plan.name)}
+                  disabled={plan.name === "Premium" && isCheckingOut}
+                  className={`${plan.name === "Premium" && isPremium
+                    ? 'bg-red-600 hover:bg-red-700 text-white border-red-600'
+                    : plan.featured
+                      ? 'btn-primary'
+                      : 'btn-secondary'
+                    } w-full text-center transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed px-6 py-3 rounded-md font-medium`}
                 >
-                  {plan.cta}
-                </a>
+                  {plan.name === "Premium" && isCheckingOut
+                    ? "Processing..."
+                    : plan.name === "Premium" && isPremium
+                      ? "Cancel Subscription"
+                      : plan.cta}
+                </button>
               </motion.div>
             ))}
           </motion.div>
@@ -186,6 +314,17 @@ export const PricingSection = () => {
         isOpen={authModal.isOpen}
         onClose={() => setAuthModal({ ...authModal, isOpen: false })}
         initialMode={authModal.mode}
+      />
+
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        isDestructive={confirmDialog.isDestructive}
+        confirmText="Confirm"
+        cancelText="Cancel"
       />
     </>
   );

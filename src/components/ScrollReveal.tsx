@@ -10,6 +10,7 @@ interface ScrollRevealProps {
     delay?: number;
     direction?: "up" | "down" | "left" | "right";
     distance?: number;
+    fullHeight?: boolean;
 }
 
 export const ScrollReveal = ({
@@ -19,6 +20,7 @@ export const ScrollReveal = ({
     delay = 0,
     direction = "up",
     distance = 30,
+    fullHeight = false,
 }: ScrollRevealProps) => {
     const variants = {
         hidden: {
@@ -45,6 +47,7 @@ export const ScrollReveal = ({
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true, margin: "-10%" }}
+                className={fullHeight ? "h-full" : undefined}
             >
                 {children}
             </motion.div>

@@ -22,30 +22,6 @@ export const Footer = () => {
           </Link>
         </nav>
 
-        {/* Public Guides */}
-        <div className="flex flex-wrap items-center justify-center gap-6 mb-8 py-4 border-t border-b border-[hsl(var(--cream))]/10">
-          <a
-            href="/49-patterns-field-guide.pdf"
-            target="_blank"
-            className="flex items-center gap-2 text-[hsl(var(--gold))] hover:text-[hsl(var(--pink-accent))] text-sm transition-colors font-medium"
-          >
-            <span className="w-6 h-6 rounded bg-[hsl(var(--gold))]/10 flex items-center justify-center">
-              <span className="text-[10px]">PDF</span>
-            </span>
-            49 Patterns Field Guide
-          </a>
-          <a
-            href="/swirling-success-guide-v2.pdf"
-            target="_blank"
-            className="flex items-center gap-2 text-[hsl(var(--gold))] hover:text-[hsl(var(--pink-accent))] text-sm transition-colors font-medium"
-          >
-            <span className="w-6 h-6 rounded bg-[hsl(var(--gold))]/10 flex items-center justify-center">
-              <span className="text-[10px]">PDF</span>
-            </span>
-            Swirling Success Guide
-          </a>
-        </div>
-
         {/* Copyright */}
         <p className="text-[hsl(var(--cream))]/50 text-xs">
           © {new Date().getFullYear()} The Pink Pill. All rights reserved.

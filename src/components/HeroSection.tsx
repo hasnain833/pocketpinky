@@ -5,25 +5,24 @@ export const HeroSection = () => {
   const chatbotUrl = "https://cdn.botpress.cloud/webchat/v3.5/shareable.html?configUrl=https://files.bpcontent.cloud/2025/12/22/20/20251222201454-LHAZEGXE.json";
 
   const contentVariants = {
-    hidden: { opacity: 0, y: 40 },
+    hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      y: 0,
       transition: {
         duration: 1,
         ease: [0.21, 0.47, 0.32, 0.98] as any,
         staggerChildren: 0.15,
-        delayChildren: 0.2
+        delayChildren: 0.3
       },
     },
   } as any;
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, scale: 0.98 },
     visible: {
       opacity: 1,
-      y: 0,
-      transition: { duration: 0.8, ease: "easeOut" }
+      scale: 1,
+      transition: { duration: 1.2, ease: [0.21, 0.47, 0.32, 0.98] as any }
     },
   } as any;
 

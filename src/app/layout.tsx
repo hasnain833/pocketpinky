@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import { Providers } from "./providers";
 import { RouteProgressBar } from "@/components/RouteProgressBar";
+import { BotpressWebchat } from "@/components/BotpressWebchat";
 import "@/app/globals.css";
 
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
@@ -33,7 +34,10 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <RouteProgressBar />
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <BotpressWebchat />
+        </Providers>
         {GA_MEASUREMENT_ID && (
           <>
             <Script
