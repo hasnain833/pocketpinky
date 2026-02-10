@@ -8,19 +8,26 @@ import { Check } from "lucide-react";
 
 function SuccessPageContent() {
     const searchParams = useSearchParams();
-    const sessionId = searchParams.get("session_id");
     const [status, setStatus] = useState("loading");
     const [productId, setProductId] = useState<string | null>(null);
+    const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+
+    // Capture session ID on mount
+    useEffect(() => {
+        const id = searchParams.get("session_id");
+        if (id) {
+            setActiveSessionId(id);
+        } else if (status === "loading") {
+            setStatus("error");
+        }
+    }, []);
 
     useEffect(() => {
-        if (!sessionId) {
-            setStatus("error");
-            return;
-        }
+        if (!activeSessionId) return;
 
         const verifySession = async () => {
             try {
-                const response = await fetch(`/api/verify-session?session_id=${sessionId}`);
+                const response = await fetch(`/api/verify-session?session_id=${activeSessionId}`);
                 const data = await response.json();
 
                 if (data.status === 'paid' || data.status === 'no_payment_required') {
@@ -36,11 +43,11 @@ function SuccessPageContent() {
         };
 
         verifySession();
-    }, [sessionId]);
+    }, [activeSessionId]);
 
     useEffect(() => {
+        // Clean URL but keep session_id available in state
         window.history.replaceState(null, "", "/guides#pricing");
-
         window.history.pushState(null, "", window.location.href);
 
         const handlePopState = () => {
@@ -55,10 +62,10 @@ function SuccessPageContent() {
     }, []);
 
     useEffect(() => {
-        if (status === "succeeded" && productId) {
+        if (status === "succeeded" && productId && activeSessionId) {
             const triggerDownload = (file: string) => {
                 const link = document.createElement("a");
-                link.href = `/api/download?file=${file}&session_id=${sessionId}`;
+                link.href = `/api/download?file=${file}&session_id=${activeSessionId}`;
                 link.setAttribute("download", "");
                 document.body.appendChild(link);
                 link.click();
@@ -79,7 +86,7 @@ function SuccessPageContent() {
 
             return () => clearTimeout(timer);
         }
-    }, [status, productId, sessionId]);
+    }, [status, productId, activeSessionId]);
 
     if (status === "loading") {
         return (
@@ -120,7 +127,7 @@ function SuccessPageContent() {
                         <div className="p-6 bg-white rounded-lg border border-[hsl(var(--divider))] shadow-sm">
                             <h3 className="font-serif text-xl text-[hsl(var(--charcoal))] mb-4">49 Patterns Field Guide</h3>
                             <a
-                                href={`/api/download?file=patterns&session_id=${sessionId}`}
+                                href={`/api/download?file=patterns&session_id=${activeSessionId}`}
                                 className="btn-wine w-full block text-center"
                             >
                                 Download Link 1
@@ -132,7 +139,7 @@ function SuccessPageContent() {
                         <div className="p-6 bg-white rounded-lg border border-[hsl(var(--divider))] shadow-sm">
                             <h3 className="font-serif text-xl text-[hsl(var(--charcoal))] mb-4">Swirling Success Guide</h3>
                             <a
-                                href={`/api/download?file=swirling&session_id=${sessionId}`}
+                                href={`/api/download?file=swirling&session_id=${activeSessionId}`}
                                 className="btn-wine w-full block text-center"
                             >
                                 Download Link 2
