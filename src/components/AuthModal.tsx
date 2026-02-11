@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { createClient } from "@/lib/supabase/client";
+import { handleSignUp, handleResetPassword } from "@/app/auth/actions";
 
 const MIN_PASSWORD_LENGTH = 8;
 const PASSWORD_HAS_UPPERCASE = /[A-Z]/;
@@ -76,28 +77,24 @@ export const AuthModal = ({ isOpen, onClose, initialMode = "login" }: AuthModalP
 
         try {
             if (isForgotPassword) {
-                const { error: resetError } = await supabase.auth.resetPasswordForEmail(form.email, {
-                    redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
-                });
-                if (resetError) throw resetError;
+                const result = await handleResetPassword(form.email);
+                if (!result.success) {
+                    throw new Error(result.error);
+                }
                 setResetEmailSent(true);
-                setMessage("Check your email for the password reset link.");
+                setMessage(result.message || "Check your email for the password reset link.");
             } else if (isSignup) {
-                const { data, error: signUpError } = await supabase.auth.signUp({
+                const result = await handleSignUp({
                     email: form.email,
                     password: form.password,
-                    options: {
-                        data: { full_name: form.name || undefined },
-                        emailRedirectTo: `${window.location.origin}/auth/callback`,
-                    },
+                    name: form.name,
                 });
-                if (signUpError) throw signUpError;
-                if (data.user && !data.session) {
-                    setMessage("Check your email for the confirmation link.");
-                } else {
-                    onClose();
-                    window.location.reload();
+
+                if (!result.success) {
+                    throw new Error(result.error);
                 }
+
+                setMessage(result.message || "Check your email for the confirmation link.");
             } else {
                 const { error: signInError } = await supabase.auth.signInWithPassword({
                     email: form.email,
