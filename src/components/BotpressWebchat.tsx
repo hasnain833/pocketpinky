@@ -80,6 +80,8 @@ export const BotpressWebchat = () => {
                 // Use the official initialization listener
                 bp.on('webchat:initialized', function() {
                     console.log('Pinky Chat Initialized');
+                    // Re-fire custom sync event to ensure identity is locked in
+                    window.dispatchEvent(new CustomEvent('bp-sync-user'));
                 });
 
                 // Ensure messages auto-scroll to bottom on every new message
@@ -99,8 +101,11 @@ export const BotpressWebchat = () => {
                     bp.sendEvent({ type: 'open' });
                 });
 
-                // Restrict access to logged in users
+                // Ensure identity is re-synced every time the chat is opened
                 bp.on('webchat:opened', function() {
+                    console.log('Pinky Chat Opened');
+                    window.dispatchEvent(new CustomEvent('bp-sync-user'));
+                    
                     if (!window.isPinkyAuthenticated) {
                         bp.sendEvent({ type: 'close' });
                         // Dispatch event to open auth modal
