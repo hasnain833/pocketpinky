@@ -141,7 +141,7 @@ export const BotpressWebchat = () => {
 
     useEffect(() => {
         if (user) {
-            console.log('Botpress Debug: User authenticated with plan', user.app_metadata?.plan);
+            console.log('Botpress Debug: User authenticated with plan', user.app_metadata?.plan || 'free');
         }
     }, [configUrl, isAuthenticated, user]);
 
