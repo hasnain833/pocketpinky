@@ -10,6 +10,8 @@ declare global {
         botpressWebchat: any;
         botpress: any;
         isPinkyAuthenticated: boolean;
+        pinkyUserEmail: string | undefined;
+        pinkyUserId: string | undefined;
     }
 }
 
@@ -37,6 +39,8 @@ export const BotpressWebchat = () => {
     useEffect(() => {
         if (typeof window !== 'undefined') {
             (window as any).isPinkyAuthenticated = !!user;
+            (window as any).pinkyUserEmail = user?.email;
+            (window as any).pinkyUserId = user?.id;
         }
     }, [user]);
     useEffect(() => {
@@ -80,8 +84,20 @@ export const BotpressWebchat = () => {
                 // Use the official initialization listener
                 bp.on('webchat:initialized', function() {
                     console.log('Pinky Chat Initialized');
-                    // Re-fire custom sync event to ensure identity is locked in
-                    window.dispatchEvent(new CustomEvent('bp-sync-user'));
+                    
+                    // Identify user as soon as initialized if email is available
+                    if (window.pinkyUserEmail) {
+                        console.log('Botpress Script: Syncing Identity', window.pinkyUserEmail);
+                        bp.updateUser({
+                            data: {
+                                email: window.pinkyUserEmail,
+                                externalId: window.pinkyUserId
+                            },
+                            tags: {
+                                email: window.pinkyUserEmail
+                            }
+                        });
+                    }
                 });
 
                 // Ensure messages auto-scroll to bottom on every new message
@@ -104,7 +120,12 @@ export const BotpressWebchat = () => {
                 // Ensure identity is re-synced every time the chat is opened
                 bp.on('webchat:opened', function() {
                     console.log('Pinky Chat Opened');
-                    window.dispatchEvent(new CustomEvent('bp-sync-user'));
+                    if (window.pinkyUserEmail && bp.updateUser) {
+                        bp.updateUser({
+                            data: { email: window.pinkyUserEmail },
+                            tags: { email: window.pinkyUserEmail }
+                        });
+                    }
                     
                     if (!window.isPinkyAuthenticated) {
                         bp.sendEvent({ type: 'close' });
