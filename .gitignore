@@ -37,3 +37,5 @@ Vetting App Launch (1).pdf
 *.njsproj
 *.sln
 *.sw?
+
+/generated/prisma

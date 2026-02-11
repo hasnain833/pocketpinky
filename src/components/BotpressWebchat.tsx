@@ -4,6 +4,15 @@ import Script from "next/script";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
+declare global {
+    interface Window {
+        botpressWebChat: any;
+        botpressWebchat: any;
+        botpress: any;
+        isPinkyAuthenticated: boolean;
+    }
+}
+
 export const BotpressWebchat = () => {
     const [user, setUser] = useState<any>(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -13,13 +22,10 @@ export const BotpressWebchat = () => {
         const supabase = createClient();
         if (!supabase) return;
 
-        // Force refresh session to get latest metadata from server
         supabase.auth.refreshSession().then(({ data: { session } }) => {
             setIsAuthenticated(!!session);
             setUser(session?.user ?? null);
         });
-
-        // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setIsAuthenticated(!!session);
             setUser(session?.user ?? null);
@@ -28,53 +34,75 @@ export const BotpressWebchat = () => {
         return () => subscription.unsubscribe();
     }, []);
 
-    // Keep auth state in sync for the browser script
     useEffect(() => {
         if (typeof window !== 'undefined') {
             (window as any).isPinkyAuthenticated = !!user;
         }
     }, [user]);
+    useEffect(() => {
+        const syncUser = () => {
+            const bp = window.botpressWebChat || window.botpressWebchat || window.botpress;
 
-    // Configuration for auto-scroll and better UX
+            if (bp && user) {
+                console.log('Botpress Identifying User:', user.email);
+
+                try {
+                    bp.updateUser({
+                        data: {
+                            externalId: user.id,
+                            email: user.email
+                        },
+                        tags: {
+                            email: user.email,
+                            userId: user.id
+                        }
+                    });
+                } catch (err) {
+                    console.error('Error calling botpress.updateUser:', err);
+                }
+            }
+        };
+
+        syncUser();
+        const interval = setInterval(syncUser, 3000);
+
+        return () => {
+            clearInterval(interval);
+        };
+    }, [user]);
+
     const initBotpressSettings = `
         var checkBotpress = setInterval(function() {
-            if (window.botpressWebchat) {
+            var bp = window.botpressWebChat || window.botpressWebchat || window.botpress;
+            if (bp) {
                 clearInterval(checkBotpress);
                 
                 // Use the official initialization listener
-                window.botpressWebchat.on('webchat:initialized', function() {
-                    console.log('Pinky Chat Initialized: Syncing user data...');
-                    
-                    // Official way to send user data to Botpress Studio
-                    window.botpressWebchat.updateUser({
-                        data: {
-                            externalId: "${user?.id || ''}",
-                            email: "${user?.email || ''}",
-                            plan: "${user?.app_metadata?.plan || user?.user_metadata?.plan || 'free'}"
-                        }
-                    });
+                bp.on('webchat:initialized', function() {
+                    console.log('Pinky Chat Initialized');
                 });
 
                 // Ensure messages auto-scroll to bottom on every new message
-                window.botpressWebchat.onEvent(function(event) {
-                    if (event.type === 'MESSAGE.RECEIVED') {
-                        setTimeout(() => {
-                            window.botpressWebchat.sendEvent({ type: 'scrollToBottom' });
-                        }, 250);
-                    }
-                }, ['MESSAGE.RECEIVED']);
+                if (typeof bp.onEvent === 'function') {
+                    bp.onEvent(function(event) {
+                        if (event.type === 'MESSAGE.RECEIVED') {
+                            setTimeout(() => {
+                                bp.sendEvent({ type: 'scrollToBottom' });
+                            }, 250);
+                        }
+                    }, ['MESSAGE.RECEIVED']);
+                }
 
                 // Support for custom toggle events
                 window.addEventListener('open-pinky-chat', function() {
-                    window.botpressWebchat.sendEvent({ type: 'show' });
-                    window.botpressWebchat.sendEvent({ type: 'open' });
+                    bp.sendEvent({ type: 'show' });
+                    bp.sendEvent({ type: 'open' });
                 });
 
                 // Restrict access to logged in users
-                window.botpressWebchat.on('webchat:opened', function() {
-                    console.log('Chat opened, checking auth:', window.isPinkyAuthenticated);
+                bp.on('webchat:opened', function() {
                     if (!window.isPinkyAuthenticated) {
-                        window.botpressWebchat.sendEvent({ type: 'close' });
+                        bp.sendEvent({ type: 'close' });
                         // Dispatch event to open auth modal
                         window.dispatchEvent(new CustomEvent('open-auth-modal', { 
                             detail: { mode: 'login', message: 'Please log in to chat with Pinky.' }
@@ -85,14 +113,10 @@ export const BotpressWebchat = () => {
         }, 500);
     `;
 
-    // Debug logging
     useEffect(() => {
-        console.log('Botpress Debug:', {
-            configUrl: !!configUrl,
-            isAuthenticated,
-            hasUser: !!user,
-            userEmail: user?.email
-        });
+        if (user) {
+            console.log('Botpress Debug: User authenticated with plan', user.app_metadata?.plan);
+        }
     }, [configUrl, isAuthenticated, user]);
 
     if (!configUrl) {
@@ -100,13 +124,10 @@ export const BotpressWebchat = () => {
         return null;
     }
 
-    // Always show for everyone, but access is restricted in the script above
-
-
     return (
         <>
             <Script
-                src="https://cdn.botpress.cloud/webchat/v3.5/inject.js"
+                src="https://cdn.botpress.cloud/webchat/v3.6/inject.js"
                 strategy="afterInteractive"
             />
             <Script

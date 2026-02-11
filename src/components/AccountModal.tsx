@@ -19,7 +19,8 @@ import {
     Dialog,
     DialogContent,
     DialogHeader,
-    DialogTitle
+    DialogTitle,
+    DialogDescription
 } from "@/components/ui/dialog";
 import { createClient } from "@/lib/supabase/client";
 
@@ -91,6 +92,9 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
                             <User className="w-6 h-6 text-[hsl(var(--gold))]" />
                             My Account
                         </DialogTitle>
+                        <DialogDescription className="text-xs text-[hsl(var(--text-muted))]">
+                            Manage your profile settings and subscription plan.
+                        </DialogDescription>
                     </DialogHeader>
 
                     {loading ? (
