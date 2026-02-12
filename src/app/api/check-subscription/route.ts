@@ -35,7 +35,9 @@ export async function GET(req: Request) {
             });
         }
 
-        const plan = user.app_metadata?.plan || "free";
+        // Normalize plan to lowercase so variants like "Premium" or "PREMIUM" are treated the same
+        const rawPlan = (user.app_metadata?.plan as string | undefined) || "free";
+        const plan = rawPlan.toLowerCase();
         const isPremium = plan === "premium";
 
         return NextResponse.json({
