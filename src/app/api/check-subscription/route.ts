@@ -27,63 +27,30 @@ export async function GET(req: Request) {
             user = (data.users as any[]).find(u => u.email?.toLowerCase() === email.toLowerCase());
         }
 
-        // after we've resolved user (keep your existing lookup)
-        // after we've resolved user (keep your existing lookup)
         if (!user) {
             return NextResponse.json({
                 plan: "free",
                 isSubscribed: false,
                 trialExpired: true,
-                debug: {
-                    foundUser: false,
-                    email,
-                    userId,
-                },
             });
         }
 
-        // NEW: inspect what prod actually sees
-        const { data: profile, error: profileError } = await supabaseAdmin
+        // FINAL: use profiles.plan as single source of truth
+        const { data: profile } = await supabaseAdmin
             .from("profiles")
-            .select("id, plan, subscription_status")
+            .select("plan")
             .eq("id", user.id)
             .maybeSingle();
 
+        const rawPlan = (profile?.plan as string | undefined) || "free";
+        const plan = rawPlan.toLowerCase();
+        const isPremium = plan === "premium";
+
         return NextResponse.json({
-            userIdFromAuth: user.id,
-            emailFromAuth: user.email,
-            profileRow: profile,
-            profileError,
+            plan,
+            isSubscribed: isPremium,
+            trialExpired: isPremium ? false : true,
         });
-        // let planSource: string | null = null;
-
-        // try {
-        //     const { data: profile } = await supabaseAdmin
-        //         .from("profiles")
-        //         .select("plan")
-        //         .eq("id", user.id)
-        //         .maybeSingle();
-
-        //     if (profile?.plan) {
-        //         planSource = profile.plan as string;
-        //     }
-        // } catch {
-        //     // If the profiles table doesn't exist or query fails, we silently ignore and fall back.
-        // }
-
-        // const rawPlan =
-        //     planSource ||
-        //     (user.app_metadata?.plan as string | undefined) ||
-        //     "free";
-
-        // const plan = rawPlan.toLowerCase();
-        // const isPremium = plan === "premium";
-
-        // return NextResponse.json({
-        //     plan,
-        //     isSubscribed: isPremium,
-        //     trialExpired: isPremium ? false : true,
-        // });
 
     } catch (error: any) {
         console.error("Check subscription error:", error);
