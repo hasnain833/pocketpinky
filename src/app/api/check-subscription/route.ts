@@ -28,6 +28,12 @@ export async function GET(req: Request) {
         }
 
         if (!user) {
+            console.log('check-subscription debug', {
+                email,
+                userId,
+                userIdFound: user?.id,
+                appMetadata: user?.app_metadata,
+              });
             return NextResponse.json({
                 plan: "free",
                 isSubscribed: false,
