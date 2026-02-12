@@ -28,16 +28,16 @@ export async function GET(req: Request) {
         }
 
         if (!user) {
-            console.log('check-subscription debug', {
-                email,
-                userId,
-                userIdFound: user?.id,
-                appMetadata: user?.app_metadata,
-              });
+            // Debug payload so we can see what's happening in production
             return NextResponse.json({
                 plan: "free",
                 isSubscribed: false,
-                trialExpired: true // Default to true if user not found to be safe
+                trialExpired: true, // Default to true if user not found to be safe
+                debug: {
+                    found: false,
+                    email,
+                    userId,
+                }
             });
         }
 
@@ -50,7 +50,15 @@ export async function GET(req: Request) {
             plan: plan,
             isSubscribed: isPremium,
             // You can add more complex logic here if needed
-            trialExpired: isPremium ? false : undefined // Let the bot calculate if free
+            trialExpired: isPremium ? false : undefined, // Let the bot calculate if free
+            debug: {
+                found: true,
+                email,
+                userId,
+                userIdFound: user.id,
+                appMetadata: user.app_metadata,
+                rawPlan,
+            }
         });
 
     } catch (error: any) {
