@@ -179,7 +179,10 @@ export const BotpressWebchat = () => {
 
     useEffect(() => {
         if (user) {
-            console.log('Botpress Debug: User authenticated with plan', user.app_metadata?.plan || 'free');
+            // Prefer the normalized tier we're sending to Botpress (from profiles/API) over stale JWT metadata
+            const tierFromWindow = typeof window !== 'undefined' ? (window as any).pinkySubscriptionTier : null;
+            const tier = tierFromWindow || user.app_metadata?.plan || 'free';
+            console.log('Botpress Debug: Effective subscription tier', tier);
         }
     }, [configUrl, isAuthenticated, user]);
 
