@@ -65,6 +65,7 @@ export const BotpressWebchat = () => {
                             const data = await res.json();
                             if (data?.plan) {
                                 subscriptionTier = data.plan;
+                                console.log('Botpress Debug: Server plan override:', subscriptionTier);
                             }
                         }
                     } catch (err) {
