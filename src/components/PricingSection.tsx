@@ -27,7 +27,6 @@ export const PricingSection = () => {
 
   useEffect(() => {
     const supabase = createClient();
-    // Force refresh session, then read plan from profiles table instead of metadata
     supabase?.auth.refreshSession().then(async ({ data: { session } }) => {
       setUser(session?.user ?? null);
 

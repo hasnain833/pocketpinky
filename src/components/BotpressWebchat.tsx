@@ -42,7 +42,9 @@ export const BotpressWebchat = () => {
             (window as any).isPinkyAuthenticated = !!user;
             (window as any).pinkyUserEmail = user?.email;
             (window as any).pinkyUserId = user?.id;
-            (window as any).pinkySubscriptionTier = user?.app_metadata?.plan || 'free';
+            // Do NOT trust metadata for tier; start as free,
+            // then let /api/check-subscription override it in syncUser.
+            (window as any).pinkySubscriptionTier = 'free';
         }
     }, [user]);
 
@@ -53,8 +55,8 @@ export const BotpressWebchat = () => {
             if (bp && user) {
                 console.log('Botpress Identifying User:', user.email);
 
-                // Default to plan from JWT, but override with server truth from check-subscription
-                let subscriptionTier = user.app_metadata?.plan || 'free';
+                // Start with "free"; override with server truth from check-subscription
+                let subscriptionTier = 'free';
 
                 (async () => {
                     try {
