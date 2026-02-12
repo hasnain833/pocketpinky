@@ -28,37 +28,41 @@ export async function GET(req: Request) {
         }
 
         if (!user) {
-            // Debug payload so we can see what's happening in production
+
             return NextResponse.json({
                 plan: "free",
                 isSubscribed: false,
-                trialExpired: true, // Default to true if user not found to be safe
-                debug: {
-                    found: false,
-                    email,
-                    userId,
-                }
+                trialExpired: true,
             });
         }
+        let planSource: string | null = null;
 
-        // Normalize plan to lowercase so variants like "Premium" or "PREMIUM" are treated the same
-        const rawPlan = (user.app_metadata?.plan as string | undefined) || "free";
+        try {
+            const { data: profile } = await supabaseAdmin
+                .from("profiles")
+                .select("plan")
+                .eq("id", user.id)
+                .maybeSingle();
+
+            if (profile?.plan) {
+                planSource = profile.plan as string;
+            }
+        } catch {
+            // If the profiles table doesn't exist or query fails, we silently ignore and fall back.
+        }
+
+        const rawPlan =
+            planSource ||
+            (user.app_metadata?.plan as string | undefined) ||
+            "free";
+
         const plan = rawPlan.toLowerCase();
         const isPremium = plan === "premium";
 
         return NextResponse.json({
-            plan: plan,
+            plan,
             isSubscribed: isPremium,
-            // You can add more complex logic here if needed
-            trialExpired: isPremium ? false : undefined, // Let the bot calculate if free
-            debug: {
-                found: true,
-                email,
-                userId,
-                userIdFound: user.id,
-                appMetadata: user.app_metadata,
-                rawPlan,
-            }
+            trialExpired: isPremium ? false : true,
         });
 
     } catch (error: any) {
