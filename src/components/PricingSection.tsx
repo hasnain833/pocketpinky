@@ -27,31 +27,46 @@ export const PricingSection = () => {
 
   useEffect(() => {
     const supabase = createClient();
-    // Force refresh session to get latest metadata from server
-    supabase?.auth.refreshSession().then(({ data: { session } }) => {
+    // Force refresh session, then read plan from profiles table instead of metadata
+    supabase?.auth.refreshSession().then(async ({ data: { session } }) => {
       setUser(session?.user ?? null);
 
-      // Check if user has Premium
       if (session?.user) {
-        const plan = session.user.app_metadata?.plan || session.user.user_metadata?.plan;
-        const status = session.user.app_metadata?.subscription_status;
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("plan, subscription_status")
+          .eq("id", session.user.id)
+          .maybeSingle();
 
-        const isActive = plan === 'premium';
+        const plan = (profile?.plan as string | undefined) || "free";
+        const status = (profile?.subscription_status as string | null) ?? null;
+
+        const isActive = plan === "premium";
         setIsPremium(isActive);
         setSubscriptionStatus(status);
+      } else {
+        setIsPremium(false);
+        setSubscriptionStatus(null);
       }
     });
+
     const { data: { subscription } } = supabase?.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
 
-      // Update Premium status on auth change
       if (session?.user) {
-        const plan = session.user.app_metadata?.plan || session.user.user_metadata?.plan;
-        const status = session.user.app_metadata?.subscription_status;
+        supabase
+          .from("profiles")
+          .select("plan, subscription_status")
+          .eq("id", session.user.id)
+          .maybeSingle()
+          .then(({ data: profile }) => {
+            const plan = (profile?.plan as string | undefined) || "free";
+            const status = (profile?.subscription_status as string | null) ?? null;
 
-        const isActive = plan === 'premium';
-        setIsPremium(isActive);
-        setSubscriptionStatus(status);
+            const isActive = plan === "premium";
+            setIsPremium(isActive);
+            setSubscriptionStatus(status);
+          });
       } else {
         setIsPremium(false);
         setSubscriptionStatus(null);
