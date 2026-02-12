@@ -12,6 +12,7 @@ declare global {
         isPinkyAuthenticated: boolean;
         pinkyUserEmail: string | undefined;
         pinkyUserId: string | undefined;
+        pinkySubscriptionTier: string | undefined;
     }
 }
 
@@ -41,6 +42,7 @@ export const BotpressWebchat = () => {
             (window as any).isPinkyAuthenticated = !!user;
             (window as any).pinkyUserEmail = user?.email;
             (window as any).pinkyUserId = user?.id;
+            (window as any).pinkySubscriptionTier = user?.app_metadata?.plan || 'free';
         }
     }, [user]);
     useEffect(() => {
@@ -50,17 +52,22 @@ export const BotpressWebchat = () => {
             if (bp && user) {
                 console.log('Botpress Identifying User:', user.email);
 
+                const subscriptionTier = user.app_metadata?.plan || 'free';
+
                 try {
                     bp.updateUser({
                         data: {
                             externalId: user.id,
-                            email: user.email
+                            email: user.email,
+                            subscriptionTier: subscriptionTier
                         },
                         tags: {
                             email: user.email,
-                            userId: user.id
+                            userId: user.id,
+                            subscriptionTier: subscriptionTier
                         }
                     });
+                    console.log('Botpress User Data Updated with tier:', subscriptionTier);
                 } catch (err) {
                     console.error('Error calling botpress.updateUser:', err);
                 }
@@ -88,13 +95,16 @@ export const BotpressWebchat = () => {
                     // Identify user as soon as initialized if email is available
                     if (window.pinkyUserEmail) {
                         console.log('Botpress Script: Syncing Identity', window.pinkyUserEmail);
+                        var tier = window.pinkySubscriptionTier || 'free';
                         bp.updateUser({
                             data: {
                                 email: window.pinkyUserEmail,
-                                externalId: window.pinkyUserId
+                                externalId: window.pinkyUserId,
+                                subscriptionTier: tier
                             },
                             tags: {
-                                email: window.pinkyUserEmail
+                                email: window.pinkyUserEmail,
+                                subscriptionTier: tier
                             }
                         });
                     }
@@ -121,9 +131,16 @@ export const BotpressWebchat = () => {
                 bp.on('webchat:opened', function() {
                     console.log('Pinky Chat Opened');
                     if (window.pinkyUserEmail && bp.updateUser) {
+                        var tier = window.pinkySubscriptionTier || 'free';
                         bp.updateUser({
-                            data: { email: window.pinkyUserEmail },
-                            tags: { email: window.pinkyUserEmail }
+                            data: { 
+                                email: window.pinkyUserEmail,
+                                subscriptionTier: tier
+                            },
+                            tags: { 
+                                email: window.pinkyUserEmail,
+                                subscriptionTier: tier
+                            }
                         });
                     }
                     
