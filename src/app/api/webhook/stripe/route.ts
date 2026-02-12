@@ -56,19 +56,21 @@ export async function POST(req: Request) {
                         subscriptionEnd = subscription.current_period_end;
                     }
 
-                    const { error } = await supabaseAdmin.auth.admin.updateUserById(
-                        userId,
-                        {
-                            app_metadata: {
-                                plan: 'premium',
+                    // Update our own profiles table as the single source of truth
+                    const { error } = await supabaseAdmin
+                        .from("profiles")
+                        .upsert(
+                            {
+                                id: userId,
+                                plan: "premium",
                                 subscription_status: subscriptionStatus,
                                 subscription_end: subscriptionEnd,
-                                stripe_customer_id: session.customer,
-                                stripe_subscription_id: session.subscription as string,
+                                stripe_customer_id: session.customer as string | null,
+                                stripe_subscription_id: (session.subscription as string) || null,
                                 cancel_at_period_end: false,
-                            }
-                        }
-                    );
+                            },
+                            { onConflict: "id" }
+                        );
 
                     if (error) {
                         console.error("Error updating user metadata via Admin API:", error);
@@ -92,21 +94,23 @@ export async function POST(req: Request) {
 
             try {
                 const supabaseAdmin = createAdminClient();
-                const { data: users } = await supabaseAdmin.auth.admin.listUsers();
-                const user = (users.users as any[]).find(u => u.app_metadata?.stripe_customer_id === customerId);
+                // Find profile by stored stripe_customer_id
+                const { data: profiles } = await supabaseAdmin
+                    .from("profiles")
+                    .select("id, stripe_customer_id")
+                    .eq("stripe_customer_id", customerId)
+                    .maybeSingle();
 
-                if (user) {
-                    await supabaseAdmin.auth.admin.updateUserById(
-                        user.id,
-                        {
-                            app_metadata: {
-                                subscription_status: updatedSubscription.status,
-                                subscription_end: updatedSubscription.current_period_end,
-                                cancel_at_period_end: updatedSubscription.cancel_at_period_end,
-                            }
-                        }
-                    );
-                    console.log(`Updated user ${user.id} subscription status to: ${updatedSubscription.status}, cancel_at_period_end: ${updatedSubscription.cancel_at_period_end}`);
+                if (profiles?.id) {
+                    await supabaseAdmin
+                        .from("profiles")
+                        .update({
+                            subscription_status: updatedSubscription.status,
+                            subscription_end: updatedSubscription.current_period_end,
+                            cancel_at_period_end: updatedSubscription.cancel_at_period_end,
+                        })
+                        .eq("id", profiles.id);
+                    console.log(`Updated profile ${profiles.id} subscription status to: ${updatedSubscription.status}, cancel_at_period_end: ${updatedSubscription.cancel_at_period_end}`);
                 }
             } catch (err) {
                 console.error("Failed to update subscription status:", err);
@@ -121,22 +125,23 @@ export async function POST(req: Request) {
 
             try {
                 const supabaseAdmin = createAdminClient();
-                const { data: users } = await supabaseAdmin.auth.admin.listUsers();
-                const user = (users.users as any[]).find(u => u.app_metadata?.stripe_customer_id === deletedCustomerId);
+                const { data: profiles } = await supabaseAdmin
+                    .from("profiles")
+                    .select("id, stripe_customer_id")
+                    .eq("stripe_customer_id", deletedCustomerId)
+                    .maybeSingle();
 
-                if (user) {
-                    await supabaseAdmin.auth.admin.updateUserById(
-                        user.id,
-                        {
-                            app_metadata: {
-                                plan: 'free',
-                                subscription_status: null,
-                                subscription_end: null,
-                                stripe_subscription_id: null,
-                            }
-                        }
-                    );
-                    console.log(`Reverted user ${user.id} to free plan`);
+                if (profiles?.id) {
+                    await supabaseAdmin
+                        .from("profiles")
+                        .update({
+                            plan: "free",
+                            subscription_status: null,
+                            subscription_end: null,
+                            stripe_subscription_id: null,
+                        })
+                        .eq("id", profiles.id);
+                    console.log(`Reverted profile ${profiles.id} to free plan`);
                 }
             } catch (err) {
                 console.error("Failed to revert user to free plan:", err);

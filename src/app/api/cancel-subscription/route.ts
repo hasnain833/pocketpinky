@@ -25,8 +25,20 @@ export async function POST(req: Request) {
 
         const userId = session.user.id;
 
-        // Get subscription ID from user metadata
-        const subscriptionId = session.user.app_metadata?.stripe_subscription_id;
+        // Get subscription ID from profiles table instead of metadata
+        const supabaseAdmin = createAdminClient();
+        const { data: profile, error: profileError } = await supabaseAdmin
+            .from("profiles")
+            .select("stripe_subscription_id")
+            .eq("id", userId)
+            .maybeSingle();
+
+        if (profileError) {
+            console.error("Error loading profile for cancellation:", profileError);
+            return NextResponse.json({ error: "Profile not found" }, { status: 400 });
+        }
+
+        const subscriptionId = profile?.stripe_subscription_id as string | null;
 
         if (!subscriptionId) {
             return NextResponse.json({ error: "No active subscription found" }, { status: 400 });
@@ -39,20 +51,17 @@ export async function POST(req: Request) {
 
         console.log(`Subscription ${subscriptionId} cancelled immediately.`);
 
-        // Update user metadata to reflect immediate revert to free plan
-        const supabaseAdmin = createAdminClient();
-        const { error } = await supabaseAdmin.auth.admin.updateUserById(
-            userId,
-            {
-                app_metadata: {
-                    plan: "free",
-                    subscription_status: "canceled",
-                    subscription_end: null,
-                    cancel_at_period_end: false,
-                    stripe_subscription_id: null,
-                }
-            }
-        );
+        // Update profiles table to reflect immediate revert to free plan
+        const { error } = await supabaseAdmin
+            .from("profiles")
+            .update({
+                plan: "free",
+                subscription_status: "canceled",
+                subscription_end: null,
+                cancel_at_period_end: false,
+                stripe_subscription_id: null,
+            })
+            .eq("id", userId);
 
         if (error) {
             console.error("Error updating user metadata:", error);
