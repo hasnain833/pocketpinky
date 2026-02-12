@@ -177,15 +177,6 @@ export const BotpressWebchat = () => {
         }, 500);
     `;
 
-    useEffect(() => {
-        if (user) {
-            // Prefer the normalized tier we're sending to Botpress (from profiles/API) over stale JWT metadata
-            const tierFromWindow = typeof window !== 'undefined' ? (window as any).pinkySubscriptionTier : null;
-            const tier = tierFromWindow || user.app_metadata?.plan || 'free';
-            console.log('Botpress Debug: Effective subscription tier', tier);
-        }
-    }, [configUrl, isAuthenticated, user]);
-
     if (!configUrl) {
         console.error('Botpress config URL is missing!');
         return null;
