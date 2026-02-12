@@ -45,6 +45,7 @@ export const BotpressWebchat = () => {
             (window as any).pinkySubscriptionTier = user?.app_metadata?.plan || 'free';
         }
     }, [user]);
+
     useEffect(() => {
         const syncUser = () => {
             const bp = window.botpressWebChat || window.botpressWebchat || window.botpress;
@@ -52,30 +53,50 @@ export const BotpressWebchat = () => {
             if (bp && user) {
                 console.log('Botpress Identifying User:', user.email);
 
-                const subscriptionTier = user.app_metadata?.plan || 'free';
+                // Default to plan from JWT, but override with server truth from check-subscription
+                let subscriptionTier = user.app_metadata?.plan || 'free';
 
-                try {
-                    bp.updateUser({
-                        data: {
-                            externalId: user.id,
-                            email: user.email,
-                            subscriptionTier: subscriptionTier
-                        },
-                        tags: {
-                            email: user.email,
-                            userId: user.id,
-                            subscriptionTier: subscriptionTier
+                (async () => {
+                    try {
+                        const res = await fetch(`/api/check-subscription?userId=${encodeURIComponent(user.id)}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data?.plan) {
+                                subscriptionTier = data.plan;
+                            }
                         }
-                    });
-                    console.log('Botpress User Data Updated with tier:', subscriptionTier);
-                } catch (err) {
-                    console.error('Error calling botpress.updateUser:', err);
-                }
+                    } catch (err) {
+                        console.error('Error calling /api/check-subscription:', err);
+                    }
+
+                    // Keep global window state in sync so Botpress init script sees the same tier
+                    if (typeof window !== 'undefined') {
+                        (window as any).pinkySubscriptionTier = subscriptionTier;
+                    }
+
+                    try {
+                        bp.updateUser({
+                            data: {
+                                externalId: user.id,
+                                email: user.email,
+                                subscriptionTier: subscriptionTier
+                            },
+                            tags: {
+                                email: user.email,
+                                userId: user.id,
+                                subscriptionTier: subscriptionTier
+                            }
+                        });
+                        console.log('Botpress User Data Updated with tier:', subscriptionTier);
+                    } catch (err) {
+                        console.error('Error calling botpress.updateUser:', err);
+                    }
+                })();
             }
         };
 
         syncUser();
-        const interval = setInterval(syncUser, 3000);
+        const interval = setInterval(syncUser, 30000);
 
         return () => {
             clearInterval(interval);
