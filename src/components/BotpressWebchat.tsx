@@ -135,14 +135,14 @@ export const BotpressWebchat = () => {
                 });
 
                 // Ensure messages auto-scroll to bottom on every new message
-                if (typeof bp.onEvent === 'function') {
-                    bp.onEvent(function(event) {
-                        if (event.type === 'MESSAGE.RECEIVED') {
-                            setTimeout(() => {
-                                bp.sendEvent({ type: 'scrollToBottom' });
-                            }, 250);
-                        }
-                    }, ['MESSAGE.RECEIVED']);
+                // Use the standard 'message' listener, which is supported in v3 webchat
+                if (typeof bp.on === 'function') {
+                    bp.on('message', function (_message) {
+                        setTimeout(function () {
+                            // Ask webchat to scroll – this is the documented event name
+                            bp.sendEvent && bp.sendEvent({ type: 'webchat:scrollToBottom' });
+                        }, 250);
+                    });
                 }
 
                 // Support for custom toggle events
