@@ -32,6 +32,7 @@ export async function GET(req: Request) {
                 plan: "free",
                 isSubscribed: false,
                 trialExpired: true,
+                _debug: "v3-profiles-only"
             });
         }
 
@@ -50,6 +51,7 @@ export async function GET(req: Request) {
             plan,
             isSubscribed: isPremium,
             trialExpired: isPremium ? false : true,
+            _debug: "v3-profiles-only"
         });
 
     } catch (error: any) {
