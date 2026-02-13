@@ -10,8 +10,11 @@ export async function GET(req: Request) {
         // We ignore email/userId now and always use the current session user
         const supabase = await createClient();
 
-        const { data: { session } } = await supabase.auth.getSession();
-        const user = session?.user;
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+        if (userError) {
+            console.error("check-subscription getUser error:", userError);
+        }
 
         if (!user) {
             // No authenticated user: treat as free

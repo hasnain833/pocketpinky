@@ -8,12 +8,13 @@ export async function GET(req: Request) {
     const supabase = await createClient();
 
     // 1) Get the currently logged-in user from the anon client
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      console.error("debug-subscription getUser error:", userError);
+    }
+    if (!user) {
       return NextResponse.json({ error: "No session user" }, { status: 401 });
     }
-
-    const user = session.user;
 
     // 2) Read profiles row for this user using anon client (no service role)
     const { data: profile, error: profileError } = await supabase
