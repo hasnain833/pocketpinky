@@ -36,6 +36,19 @@ const emailWrapper = (content: string) => `
     </div>
 `;
 
+// Create SendGrid transporter
+const createSendGridTransporter = () => {
+    return nodemailer.createTransport({
+        host: "smtp.sendgrid.net",
+        port: 587,
+        secure: false, // true for 465, false for other ports
+        auth: {
+            user: "apikey", // This is literally the string "apikey" for SendGrid
+            pass: process.env.SENDGRID_API_KEY,
+        },
+    });
+};
+
 export async function handleSignUp({
     email,
     password,
@@ -47,20 +60,41 @@ export async function handleSignUp({
 }) {
     try {
         const supabase = createAdminClient();
-        const host = headers().get("host");
+        const headersList = await headers();
+        const host = headersList.get("host") || "";
         const protocol = host?.includes("localhost") ? "http" : "https";
         const origin = `${protocol}://${host}`;
 
         console.log('SignUp request for:', email);
         console.log('Detected origin:', origin);
 
-        // 1. Create the user in Supabase Auth via admin.generateLink
+        // 1. Create the user first with email confirmation disabled
+        const { data: userData, error: createError } = await supabase.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: false,
+            user_metadata: {
+                full_name: name || undefined,
+            },
+        });
+
+        if (createError) {
+            console.error('User creation error:', createError);
+            throw createError;
+        }
+
+        if (!userData.user) {
+            throw new Error('Failed to create user');
+        }
+
+        console.log('User created successfully:', userData.user.id);
+
+        // 2. Generate confirmation link for the created user
         const { data, error: linkError } = await supabase.auth.admin.generateLink({
             type: "signup",
             email,
-            password,
+            password: "",
             options: {
-                data: { full_name: name || undefined },
                 redirectTo: `${origin}/auth/callback`,
             },
         });
@@ -70,23 +104,28 @@ export async function handleSignUp({
             throw linkError;
         }
 
-        const token_hash = data.properties.hashed_token;
+        const token_hash = data?.properties?.hashed_token;
+        if (!token_hash) {
+            throw new Error('Failed to generate confirmation token');
+        }
+        
         const confirmLink = `${origin}/auth/callback?token_hash=${token_hash}&type=signup`;
 
         console.log('Token hash flow used');
         console.log('Action link generated successfully');
 
-        // 2. Send email via Nodemailer (Gmail SMTP)
-        const transporter = nodemailer.createTransport({
-            service: "gmail",
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASSWORD,
-            },
-        });
+        // 3. Send email via SendGrid SMTP
+        if (!process.env.SENDGRID_API_KEY) {
+            throw new Error('SendGrid API key not configured');
+        }
+
+        const transporter = createSendGridTransporter();
 
         const mailOptions = {
-            from: `"Pinky Pill" <${process.env.SMTP_USER}>`,
+            from: {
+                name: "Pinky Pill",
+                address: process.env.SENDGRID_FROM_EMAIL || "noreply@pinkypill.com" // Set your verified sender email
+            },
             to: email,
             subject: "Confirm your signup | Pinky Pill",
             html: emailWrapper(`
@@ -118,7 +157,8 @@ export async function handleSignUp({
 export async function handleResetPassword(email: string) {
     try {
         const supabase = createAdminClient();
-        const host = headers().get("host");
+        const headersList = await headers();
+        const host = headersList.get("host") || "";
         const protocol = host?.includes("localhost") ? "http" : "https";
         const origin = `${protocol}://${host}`;
 
@@ -138,23 +178,28 @@ export async function handleResetPassword(email: string) {
             throw linkError;
         }
 
-        const token_hash = data.properties.hashed_token;
+        const token_hash = data?.properties?.hashed_token;
+        if (!token_hash) {
+            throw new Error('Failed to generate recovery token');
+        }
+        
         const confirmLink = `${origin}/auth/callback?token_hash=${token_hash}&type=recovery&next=/auth/reset-password`;
 
         console.log('Token hash flow used for recovery');
         console.log('Recovery link generated successfully');
 
-        // 2. Send email via Nodemailer (Gmail SMTP)
-        const transporter = nodemailer.createTransport({
-            service: "gmail",
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASSWORD,
-            },
-        });
+        // 2. Send email via SendGrid SMTP
+        if (!process.env.SENDGRID_API_KEY) {
+            throw new Error('SendGrid API key not configured');
+        }
+
+        const transporter = createSendGridTransporter();
 
         const mailOptions = {
-            from: `"Pinky Pill" <${process.env.SMTP_USER}>`,
+            from: {
+                name: "Pinky Pill",
+                address: process.env.SENDGRID_FROM_EMAIL || "noreply@pinkypill.com" // Set your verified sender email
+            },
             to: email,
             subject: "Reset your password | Pinky Pill",
             html: emailWrapper(`
