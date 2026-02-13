@@ -54,13 +54,33 @@ export async function handleSignUp({
         console.log('SignUp request for:', email);
         console.log('Detected origin:', origin);
 
-        // 1. Create the user in Supabase Auth via admin.generateLink
+        // 1. Create the user first with email confirmation disabled
+        const { data: userData, error: createError } = await supabase.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: false,
+            user_metadata: {
+                full_name: name || undefined,
+            },
+        });
+
+        if (createError) {
+            console.error('User creation error:', createError);
+            throw createError;
+        }
+
+        if (!userData.user) {
+            throw new Error('Failed to create user');
+        }
+
+        console.log('User created successfully:', userData.user.id);
+
+        // 2. Generate confirmation link for the created user
         const { data, error: linkError } = await supabase.auth.admin.generateLink({
             type: "signup",
             email,
-            password,
+            password: "", 
             options: {
-                data: { full_name: name || undefined },
                 redirectTo: `${origin}/auth/callback`,
             },
         });
