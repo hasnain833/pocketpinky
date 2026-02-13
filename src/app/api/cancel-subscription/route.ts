@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -17,16 +16,31 @@ export async function POST(req: Request) {
 
         // Get authenticated user
         const supabase = await createClient();
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-        if (!session?.user) {
+        if (userError) {
+            console.error("cancel-subscription getUser error:", userError);
+        }
+
+        if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const userId = session.user.id;
+        const userId = user.id;
 
-        // Get subscription ID from user metadata
-        const subscriptionId = session.user.app_metadata?.stripe_subscription_id;
+        // Get subscription ID from profiles table for this user (session-based)
+        const { data: profile, error: profileError } = await supabase
+            .from("profiles")
+            .select("stripe_subscription_id")
+            .eq("id", userId)
+            .maybeSingle();
+
+        if (profileError) {
+            console.error("Error loading profile for cancellation:", profileError);
+            return NextResponse.json({ error: "Profile not found" }, { status: 400 });
+        }
+
+        const subscriptionId = profile?.stripe_subscription_id as string | null;
 
         if (!subscriptionId) {
             return NextResponse.json({ error: "No active subscription found" }, { status: 400 });
@@ -39,20 +53,17 @@ export async function POST(req: Request) {
 
         console.log(`Subscription ${subscriptionId} cancelled immediately.`);
 
-        // Update user metadata to reflect immediate revert to free plan
-        const supabaseAdmin = createAdminClient();
-        const { error } = await supabaseAdmin.auth.admin.updateUserById(
-            userId,
-            {
-                app_metadata: {
-                    plan: "free",
-                    subscription_status: "canceled",
-                    subscription_end: null,
-                    cancel_at_period_end: false,
-                    stripe_subscription_id: null,
-                }
-            }
-        );
+        // Update profiles table to reflect immediate revert to free plan
+        const { error } = await supabase
+            .from("profiles")
+            .update({
+                plan: "free",
+                subscription_status: "canceled",
+                subscription_end: null,
+                cancel_at_period_end: false,
+                stripe_subscription_id: null,
+            })
+            .eq("id", userId);
 
         if (error) {
             console.error("Error updating user metadata:", error);

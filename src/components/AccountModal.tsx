@@ -44,19 +44,25 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
         const supabase = createClient();
         if (!supabase) return;
 
-        // Force refresh session to get latest metadata from server
-        supabase.auth.refreshSession().then(({ data: { session } }) => {
+        // Force refresh session to get latest user, then load subscription from profiles table
+        supabase.auth.refreshSession().then(async ({ data: { session } }) => {
             if (session?.user) {
                 setUserEmail(session.user.email ?? null);
 
-                // Fetch plan and subscription details from metadata
-                const userPlan = session.user.app_metadata?.plan || session.user.user_metadata?.plan || "free";
+                // Load plan and subscription details from profiles table (single source of truth)
+                const { data: profile } = await supabase
+                    .from("profiles")
+                    .select("plan, subscription_status, subscription_end")
+                    .eq("id", session.user.id)
+                    .maybeSingle();
+
+                const userPlan = (profile?.plan as string | undefined) || "free";
                 setPlan(userPlan === "premium" ? "Premium" : "Free");
 
-                const status = session.user.app_metadata?.subscription_status || "active";
+                const status = (profile?.subscription_status as string | undefined) || "active";
                 setSubscriptionStatus(status);
 
-                const end = session.user.app_metadata?.subscription_end;
+                const end = (profile?.subscription_end as number | null) ?? null;
                 setSubscriptionEnd(end);
             }
             setLoading(false);

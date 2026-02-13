@@ -53,6 +53,32 @@ export const Header = () => {
     setUser(null);
     const supabase = createClient();
     if (supabase) await supabase.auth.signOut();
+
+
+    try {
+      const bp: any = (window as any).botpressWebChat || (window as any).botpressWebchat || (window as any).botpress;
+      if (bp) {
+        try {
+          localStorage.removeItem('bp:webchat:conversationId');
+          localStorage.removeItem('bp:webchat:state');
+        } catch {
+          // ignore storage errors
+        }
+
+        try {
+          if (typeof bp.restart === 'function') {
+            bp.restart();
+          } else if (typeof bp.resetState === 'function') {
+            bp.resetState();
+          } else {
+            bp.sendEvent && bp.sendEvent({ type: 'webchat:reset' });
+          }
+        } catch {
+        }
+      }
+    } catch {
+    }
+
     window.location.href = "/";
   }
 

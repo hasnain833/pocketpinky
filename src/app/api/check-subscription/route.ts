@@ -1,48 +1,54 @@
 
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
     try {
         const { searchParams } = new URL(req.url);
-        const email = searchParams.get("email");
-        const userId = searchParams.get("userId");
+        // We ignore email/userId now and always use the current session user
+        const supabase = await createClient();
 
-        if (!email && !userId) {
-            return NextResponse.json({ error: "Email or UserID required" }, { status: 400 });
-        }
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-        const supabaseAdmin = createAdminClient();
-        let user;
-
-        if (userId) {
-            const { data, error } = await supabaseAdmin.auth.admin.getUserById(userId);
-            if (error) throw error;
-            user = data.user;
-        } else if (email) {
-            const { data, error } = await supabaseAdmin.auth.admin.listUsers();
-            if (error) throw error;
-            user = (data.users as any[]).find(u => u.email?.toLowerCase() === email.toLowerCase());
+        if (userError) {
+            console.error("check-subscription getUser error:", userError);
         }
 
         if (!user) {
+            // No authenticated user: treat as free
             return NextResponse.json({
                 plan: "free",
                 isSubscribed: false,
-                trialExpired: true // Default to true if user not found to be safe
-            });
+                trialExpired: true,
+            }, { status: 401 });
         }
 
-        const plan = user.app_metadata?.plan || "free";
+        // Use profiles.plan as single source of truth for THIS user
+        const { data: profile, error } = await supabase
+            .from("profiles")
+            .select("plan")
+            .eq("id", user.id)
+            .maybeSingle();
+
+        if (error) {
+            console.error("check-subscription profiles error:", error);
+            return NextResponse.json({
+                plan: "free",
+                isSubscribed: false,
+                trialExpired: true,
+            }, { status: 500 });
+        }
+
+        const rawPlan = (profile?.plan as string | undefined) || "free";
+        const plan = rawPlan.toLowerCase();
         const isPremium = plan === "premium";
 
         return NextResponse.json({
-            plan: plan,
+            plan,
             isSubscribed: isPremium,
-            // You can add more complex logic here if needed
-            trialExpired: isPremium ? false : undefined // Let the bot calculate if free
+            trialExpired: isPremium ? false : true,
         });
 
     } catch (error: any) {

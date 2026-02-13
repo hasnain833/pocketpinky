@@ -12,6 +12,7 @@ declare global {
         isPinkyAuthenticated: boolean;
         pinkyUserEmail: string | undefined;
         pinkyUserId: string | undefined;
+        pinkySubscriptionTier: string | undefined;
     }
 }
 
@@ -41,8 +42,12 @@ export const BotpressWebchat = () => {
             (window as any).isPinkyAuthenticated = !!user;
             (window as any).pinkyUserEmail = user?.email;
             (window as any).pinkyUserId = user?.id;
+            // Do NOT trust metadata for tier; start as free,
+            // then let /api/check-subscription override it in syncUser.
+            (window as any).pinkySubscriptionTier = 'free';
         }
     }, [user]);
+
     useEffect(() => {
         const syncUser = () => {
             const bp = window.botpressWebChat || window.botpressWebchat || window.botpress;
@@ -50,25 +55,51 @@ export const BotpressWebchat = () => {
             if (bp && user) {
                 console.log('Botpress Identifying User:', user.email);
 
-                try {
-                    bp.updateUser({
-                        data: {
-                            externalId: user.id,
-                            email: user.email
-                        },
-                        tags: {
-                            email: user.email,
-                            userId: user.id
+                // Start with "free"; override with server truth from check-subscription
+                let subscriptionTier = 'free';
+
+                (async () => {
+                    try {
+                        const res = await fetch(`/api/check-subscription?userId=${encodeURIComponent(user.id)}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data?.plan) {
+                                subscriptionTier = data.plan;
+                                console.log('Botpress Debug: Server plan override:', subscriptionTier);
+                            }
                         }
-                    });
-                } catch (err) {
-                    console.error('Error calling botpress.updateUser:', err);
-                }
+                    } catch (err) {
+                        console.error('Error calling /api/check-subscription:', err);
+                    }
+
+                    // Keep global window state in sync so Botpress init script sees the same tier
+                    if (typeof window !== 'undefined') {
+                        (window as any).pinkySubscriptionTier = subscriptionTier;
+                    }
+
+                    try {
+                        bp.updateUser({
+                            data: {
+                                externalId: user.id,
+                                email: user.email,
+                                subscriptionTier: subscriptionTier
+                            },
+                            tags: {
+                                email: user.email,
+                                userId: user.id,
+                                subscriptionTier: subscriptionTier
+                            }
+                        });
+                        console.log('Botpress User Data Updated with tier:', subscriptionTier);
+                    } catch (err) {
+                        console.error('Error calling botpress.updateUser:', err);
+                    }
+                })();
             }
         };
 
         syncUser();
-        const interval = setInterval(syncUser, 3000);
+        const interval = setInterval(syncUser, 30000);
 
         return () => {
             clearInterval(interval);
@@ -88,27 +119,30 @@ export const BotpressWebchat = () => {
                     // Identify user as soon as initialized if email is available
                     if (window.pinkyUserEmail) {
                         console.log('Botpress Script: Syncing Identity', window.pinkyUserEmail);
+                        var tier = window.pinkySubscriptionTier || 'free';
                         bp.updateUser({
                             data: {
                                 email: window.pinkyUserEmail,
-                                externalId: window.pinkyUserId
+                                externalId: window.pinkyUserId,
+                                subscriptionTier: tier
                             },
                             tags: {
-                                email: window.pinkyUserEmail
+                                email: window.pinkyUserEmail,
+                                subscriptionTier: tier
                             }
                         });
                     }
                 });
 
                 // Ensure messages auto-scroll to bottom on every new message
-                if (typeof bp.onEvent === 'function') {
-                    bp.onEvent(function(event) {
-                        if (event.type === 'MESSAGE.RECEIVED') {
-                            setTimeout(() => {
-                                bp.sendEvent({ type: 'scrollToBottom' });
-                            }, 250);
-                        }
-                    }, ['MESSAGE.RECEIVED']);
+                // Use the standard 'message' listener, which is supported in v3 webchat
+                if (typeof bp.on === 'function') {
+                    bp.on('message', function (_message) {
+                        setTimeout(function () {
+                            // Ask webchat to scroll – this is the documented event name
+                            bp.sendEvent && bp.sendEvent({ type: 'webchat:scrollToBottom' });
+                        }, 250);
+                    });
                 }
 
                 // Support for custom toggle events
@@ -121,9 +155,16 @@ export const BotpressWebchat = () => {
                 bp.on('webchat:opened', function() {
                     console.log('Pinky Chat Opened');
                     if (window.pinkyUserEmail && bp.updateUser) {
+                        var tier = window.pinkySubscriptionTier || 'free';
                         bp.updateUser({
-                            data: { email: window.pinkyUserEmail },
-                            tags: { email: window.pinkyUserEmail }
+                            data: { 
+                                email: window.pinkyUserEmail,
+                                subscriptionTier: tier
+                            },
+                            tags: { 
+                                email: window.pinkyUserEmail,
+                                subscriptionTier: tier
+                            }
                         });
                     }
                     
@@ -138,12 +179,6 @@ export const BotpressWebchat = () => {
             }
         }, 500);
     `;
-
-    useEffect(() => {
-        if (user) {
-            console.log('Botpress Debug: User authenticated with plan', user.app_metadata?.plan || 'free');
-        }
-    }, [configUrl, isAuthenticated, user]);
 
     if (!configUrl) {
         console.error('Botpress config URL is missing!');
