@@ -1,47 +1,42 @@
 
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
     try {
         const { searchParams } = new URL(req.url);
-        const email = searchParams.get("email");
-        const userId = searchParams.get("userId");
+        // We ignore email/userId now and always use the current session user
+        const supabase = await createClient();
 
-        if (!email && !userId) {
-            return NextResponse.json({ error: "Email or UserID required" }, { status: 400 });
-        }
-
-        const supabaseAdmin = createAdminClient();
-        let user;
-
-        if (userId) {
-            const { data, error } = await supabaseAdmin.auth.admin.getUserById(userId);
-            if (error) throw error;
-            user = data.user;
-        } else if (email) {
-            const { data, error } = await supabaseAdmin.auth.admin.listUsers();
-            if (error) throw error;
-            user = (data.users as any[]).find(u => u.email?.toLowerCase() === email.toLowerCase());
-        }
+        const { data: { session } } = await supabase.auth.getSession();
+        const user = session?.user;
 
         if (!user) {
+            // No authenticated user: treat as free
             return NextResponse.json({
                 plan: "free",
                 isSubscribed: false,
                 trialExpired: true,
-                _debug: "v3-profiles-only"
-            });
+            }, { status: 401 });
         }
 
-        // FINAL: use profiles.plan as single source of truth
-        const { data: profile } = await supabaseAdmin
+        // Use profiles.plan as single source of truth for THIS user
+        const { data: profile, error } = await supabase
             .from("profiles")
             .select("plan")
             .eq("id", user.id)
             .maybeSingle();
+
+        if (error) {
+            console.error("check-subscription profiles error:", error);
+            return NextResponse.json({
+                plan: "free",
+                isSubscribed: false,
+                trialExpired: true,
+            }, { status: 500 });
+        }
 
         const rawPlan = (profile?.plan as string | undefined) || "free";
         const plan = rawPlan.toLowerCase();
@@ -51,7 +46,6 @@ export async function GET(req: Request) {
             plan,
             isSubscribed: isPremium,
             trialExpired: isPremium ? false : true,
-            _debug: "v3-profiles-only"
         });
 
     } catch (error: any) {

@@ -54,7 +54,7 @@ export async function handleSignUp({
         console.log('SignUp request for:', email);
         console.log('Detected origin:', origin);
 
-        // 1. Create the user in Supabase Auth
+        // 1. Create the user in Supabase Auth via admin.generateLink
         const { data, error: linkError } = await supabase.auth.admin.generateLink({
             type: "signup",
             email,
@@ -124,7 +124,7 @@ export async function handleResetPassword(email: string) {
 
         console.log('Password reset request for:', email);
 
-        // 1. Generate the recovery link
+        // 1. Generate the recovery link via admin.generateLink
         const { data, error: linkError } = await supabase.auth.admin.generateLink({
             type: "recovery",
             email,

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +24,8 @@ export async function POST(req: Request) {
 
         const userId = session.user.id;
 
-        // Get subscription ID from profiles table instead of metadata
-        const supabaseAdmin = createAdminClient();
-        const { data: profile, error: profileError } = await supabaseAdmin
+        // Get subscription ID from profiles table for this user (session-based)
+        const { data: profile, error: profileError } = await supabase
             .from("profiles")
             .select("stripe_subscription_id")
             .eq("id", userId)
@@ -52,7 +50,7 @@ export async function POST(req: Request) {
         console.log(`Subscription ${subscriptionId} cancelled immediately.`);
 
         // Update profiles table to reflect immediate revert to free plan
-        const { error } = await supabaseAdmin
+        const { error } = await supabase
             .from("profiles")
             .update({
                 plan: "free",
