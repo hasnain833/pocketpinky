@@ -58,6 +58,7 @@ export async function handleSignUp({
     password: string;
     name?: string;
 }) {
+    console.log('[Signup] Starting signup process for:', email);
     try {
         const supabase = createAdminClient();
         const headersList = await headers();
@@ -108,7 +109,7 @@ export async function handleSignUp({
         if (!token_hash) {
             throw new Error('Failed to generate confirmation token');
         }
-        
+
         const confirmLink = `${origin}/auth/callback?token_hash=${token_hash}&type=signup`;
 
         console.log('Token hash flow used');
@@ -124,7 +125,7 @@ export async function handleSignUp({
         const mailOptions = {
             from: {
                 name: "Pinky Pill",
-                address: process.env.SENDGRID_FROM_EMAIL || "noreply@pinkypill.com" // Set your verified sender email
+                address: process.env.SENDGRID_FROM_EMAIL || "noreply@pinkypill.com"
             },
             to: email,
             subject: "Confirm your signup | Pinky Pill",
@@ -145,12 +146,89 @@ export async function handleSignUp({
             `),
         };
 
-        await transporter.sendMail(mailOptions);
+        console.log('[Signup] Attempting to send confirmation email via SendGrid to:', email);
+        const sendResult = await transporter.sendMail(mailOptions);
+        console.log('[Signup] SendGrid response:', sendResult);
 
         return { success: true, message: "Check your email for the confirmation link." };
     } catch (err: any) {
-        console.error('Signup error:', err);
+        console.error('[Signup] Error occurred:', err);
         return { success: false, error: err.message || "Something went wrong." };
+    }
+}
+
+export async function sendPaymentConfirmationEmail(email: string, productId: string = "premium") {
+    console.log('[PaymentEmail] Starting to send confirmation email for:', email, 'Product:', productId);
+    try {
+        if (!process.env.SENDGRID_API_KEY) {
+            throw new Error('SendGrid API key not configured');
+        }
+
+        const PRODUCT_TEMPLATES: Record<string, { subject: string, title: string, body: string, features: string[] }> = {
+            premium: {
+                subject: "Welcome to Premium | Pinky Pill",
+                title: "Access Granted.",
+                body: "Your Premium subscription is now active. You have full, unlimited access to Pinky Pill's entire ecosystem.",
+                features: ["Ask unlimited questions", "Access all vetting modes", "Explore the 49 Pattern Library", "Use Swirling Mode for IR expertise"]
+            },
+            patterns: {
+                subject: "Your 49 Patterns Guide | Pinky Pill",
+                title: "Master the Patterns.",
+                body: "Thank you for purchasing the 49 Patterns Field Guide. Your digital copy is ready for exploration.",
+                features: ["Comprehensive pattern breakdown", "Red flag spotting techniques", "Real-world examples", "Updated monthly insights"]
+            },
+            swirling: {
+                subject: "Your Swirling Success Guide | Pinky Pill",
+                title: "Expertise Awaits.",
+                body: "Thank you for purchasing the Swirling Success Guide. You're now equipped with IR expertise.",
+                features: ["Interpersonal relationship strategies", "Communication blueprints", "Psychology-backed insights", "Actionable success steps"]
+            },
+            bundle: {
+                subject: "Your Ultimate Guide Bundle | Pinky Pill",
+                title: "The Full Arsenal.",
+                body: "You've unlocked both the 49 Patterns and Swirling Success guides. Your journey to clarity starts now.",
+                features: ["49 Patterns Field Guide", "Swirling Success Guide", "Bonus integration strategies", "Lifetime updates"]
+            }
+        };
+
+        const template = PRODUCT_TEMPLATES[productId] || PRODUCT_TEMPLATES.premium;
+        const transporter = createSendGridTransporter();
+
+        const mailOptions = {
+            from: {
+                name: "Pinky Pill",
+                address: process.env.SENDGRID_FROM_EMAIL || "noreply@pinkypill.com"
+            },
+            to: email,
+            subject: template.subject,
+            html: emailWrapper(`
+                <h2 style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 24px; color: ${COLORS.charcoal}; margin-top: 0;">${template.title}</h2>
+                <p style="font-size: 15px; color: #4a4a4a; margin-bottom: 25px;">
+                    ${template.body}
+                </p>
+                <div style="text-align: center; margin: 35px 0;">
+                    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://pinkypill.com'}" style="display: inline-block; background-color: ${COLORS.charcoal}; color: ${COLORS.cream}; padding: 18px 36px; text-decoration: none; border-radius: 2px; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 2px; transition: all 0.3s;">
+                        Start Reading
+                    </a>
+                </div>
+                <p style="font-size: 14px; color: #4a4a4a;">
+                    What's included in your purchase:
+                    <ul style="text-align: left; display: inline-block; margin-top: 10px;">
+                        ${template.features.map(f => `<li>${f}</li>`).join('')}
+                    </ul>
+                </p>
+                <p style="font-size: 13px; color: ${COLORS.textMuted}; text-align: center; margin-top: 30px;">
+                    Stay sharp. Trust Pinky.
+                </p>
+            `),
+        };
+
+        const result = await transporter.sendMail(mailOptions);
+        console.log('[PaymentEmail] Confirmation email sent successfully:', result);
+        return { success: true };
+    } catch (err: any) {
+        console.error('[PaymentEmail] Error sending confirmation email:', err);
+        return { success: false, error: err.message };
     }
 }
 
@@ -182,7 +260,7 @@ export async function handleResetPassword(email: string) {
         if (!token_hash) {
             throw new Error('Failed to generate recovery token');
         }
-        
+
         const confirmLink = `${origin}/auth/callback?token_hash=${token_hash}&type=recovery&next=/auth/reset-password`;
 
         console.log('Token hash flow used for recovery');

@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendPaymentConfirmationEmail } from "@/app/auth/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -39,8 +40,15 @@ export async function POST(req: Request) {
             const session = event.data.object as Stripe.Checkout.Session;
             const userId = session.client_reference_id || session.metadata?.userId;
             const productId = session.metadata?.productId;
+            const customerEmail = session.customer_details?.email;
 
-            console.log(`Payment successful for session ID: ${session.id}, User: ${userId}, Product: ${productId}`);
+            console.log(`Payment successful for session ID: ${session.id}, User: ${userId}, Product: ${productId}, Email: ${customerEmail}`);
+
+            if (customerEmail) {
+                // Send confirmation email asynchronously with specific product ID
+                sendPaymentConfirmationEmail(customerEmail, productId || 'premium')
+                    .catch(err => console.error('Failed to send payment email:', err));
+            }
 
             if (userId && productId === 'premium') {
                 try {
@@ -66,8 +74,6 @@ export async function POST(req: Request) {
                                 subscription_status: subscriptionStatus,
                                 subscription_end: subscriptionEnd,
                                 stripe_customer_id: session.customer as string | null,
-                                stripe_subscription_id: (session.subscription as string) || null,
-                                cancel_at_period_end: false,
                             },
                             { onConflict: "id" }
                         );
@@ -107,7 +113,6 @@ export async function POST(req: Request) {
                         .update({
                             subscription_status: updatedSubscription.status,
                             subscription_end: updatedSubscription.current_period_end,
-                            cancel_at_period_end: updatedSubscription.cancel_at_period_end,
                         })
                         .eq("id", profiles.id);
                     console.log(`Updated profile ${profiles.id} subscription status to: ${updatedSubscription.status}, cancel_at_period_end: ${updatedSubscription.cancel_at_period_end}`);
@@ -138,7 +143,6 @@ export async function POST(req: Request) {
                             plan: "free",
                             subscription_status: null,
                             subscription_end: null,
-                            stripe_subscription_id: null,
                         })
                         .eq("id", profiles.id);
                     console.log(`Reverted profile ${profiles.id} to free plan`);
