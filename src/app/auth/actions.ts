@@ -3,6 +3,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import nodemailer from "nodemailer";
 import { headers } from "next/headers";
+import path from "path";
+import fs from "fs";
 
 const COLORS = {
     cream: "#FFFCF9",
@@ -18,6 +20,7 @@ const emailWrapper = (content: string) => `
     <div style="background-color: ${COLORS.cream}; padding: 40px 20px; font-family: 'Montserrat', Helvetica, Arial, sans-serif; color: ${COLORS.charcoal}; line-height: 1.6;">
         <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid ${COLORS.divider}; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
             <div style="padding: 40px; text-align: center; border-bottom: 1px solid ${COLORS.divider};">
+                <img src="cid:logo" alt="Pinky Pill" style="width: 80px; height: auto; margin-bottom: 20px;" />
                 <h1 style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 28px; margin: 0; letter-spacing: 2px; text-transform: uppercase;">Pinky Pill</h1>
                 <p style="font-size: 10px; color: ${COLORS.pink}; margin-top: 5px; letter-spacing: 1px; font-weight: bold;">YOUR AI BIG SISTER FOR DATING CLARITY</p>
             </div>
@@ -144,6 +147,13 @@ export async function handleSignUp({
                     <a href="${confirmLink}" style="color: ${COLORS.pink}; word-break: break-all; text-decoration: none;">${confirmLink}</a>
                 </p>
             `),
+            attachments: [
+                {
+                    filename: 'pinky.png',
+                    path: path.join(process.cwd(), 'public', 'logos', 'pinky.png'),
+                    cid: 'logo'
+                }
+            ]
         };
 
         console.log('[Signup] Attempting to send confirmation email via SendGrid to:', email);
@@ -221,6 +231,13 @@ export async function sendPaymentConfirmationEmail(email: string, productId: str
                     Stay sharp. Trust Pinky.
                 </p>
             `),
+            attachments: [
+                {
+                    filename: 'pinky.png',
+                    path: path.join(process.cwd(), 'public', 'logos', 'pinky.png'),
+                    cid: 'logo'
+                }
+            ]
         };
 
         const result = await transporter.sendMail(mailOptions);
@@ -295,6 +312,13 @@ export async function handleResetPassword(email: string) {
                     <a href="${confirmLink}" style="color: ${COLORS.pink}; word-break: break-all; text-decoration: none;">${confirmLink}</a>
                 </p>
             `),
+            attachments: [
+                {
+                    filename: 'pinky.png',
+                    path: path.join(process.cwd(), 'public', 'logos', 'pinky.png'),
+                    cid: 'logo'
+                }
+            ]
         };
 
         await transporter.sendMail(mailOptions);
