@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   subscription_status TEXT,
   subscription_end TIMESTAMPTZ,
   stripe_customer_id TEXT,
+  stripe_subscription_id TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

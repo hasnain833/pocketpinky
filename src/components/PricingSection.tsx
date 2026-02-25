@@ -113,7 +113,7 @@ export const PricingSection = () => {
                 title: "Subscription Cancelled",
                 description: data.message,
                 onConfirm: () => {
-                  setConfirmDialog({ ...confirmDialog, isOpen: false });
+                  window.location.reload();
                 },
               });
             } else {

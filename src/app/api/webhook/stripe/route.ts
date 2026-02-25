@@ -74,6 +74,7 @@ export async function POST(req: Request) {
                                 subscription_status: subscriptionStatus,
                                 subscription_end: subscriptionEnd,
                                 stripe_customer_id: session.customer as string | null,
+                                stripe_subscription_id: session.subscription as string | null,
                             },
                             { onConflict: "id" }
                         );
@@ -113,6 +114,7 @@ export async function POST(req: Request) {
                         .update({
                             subscription_status: updatedSubscription.status,
                             subscription_end: updatedSubscription.current_period_end,
+                            stripe_subscription_id: updatedSubscription.id,
                         })
                         .eq("id", profiles.id);
                     console.log(`Updated profile ${profiles.id} subscription status to: ${updatedSubscription.status}, cancel_at_period_end: ${updatedSubscription.cancel_at_period_end}`);

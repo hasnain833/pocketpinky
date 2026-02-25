@@ -31,7 +31,7 @@ export async function POST(req: Request) {
         // Get subscription ID from profiles table for this user (session-based)
         const { data: profile, error: profileError } = await supabase
             .from("profiles")
-            .select("stripe_subscription_id")
+            .select("stripe_subscription_id, stripe_customer_id")
             .eq("id", userId)
             .maybeSingle();
 
@@ -40,7 +40,32 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Profile not found" }, { status: 400 });
         }
 
-        const subscriptionId = profile?.stripe_subscription_id as string | null;
+        let subscriptionId = profile?.stripe_subscription_id as string | null;
+        const stripeCustomerId = profile?.stripe_customer_id as string | null;
+
+        if (!subscriptionId) {
+            console.log(`No subscription ID found in DB for user ${userId}. Checking Stripe for customer ${stripeCustomerId}...`);
+
+            if (stripeCustomerId) {
+                // Fallback: Try to find an active subscription for this customer in Stripe
+                const subscriptions = await stripe.subscriptions.list({
+                    customer: stripeCustomerId,
+                    status: 'active',
+                    limit: 1,
+                });
+
+                if (subscriptions.data.length > 0) {
+                    subscriptionId = subscriptions.data[0].id;
+                    console.log(`Found active subscription ${subscriptionId} in Stripe for customer ${stripeCustomerId}`);
+
+                    // Proactively update the database with this ID for future use
+                    await supabase
+                        .from("profiles")
+                        .update({ stripe_subscription_id: subscriptionId })
+                        .eq("id", userId);
+                }
+            }
+        }
 
         if (!subscriptionId) {
             return NextResponse.json({ error: "No active subscription found" }, { status: 400 });
