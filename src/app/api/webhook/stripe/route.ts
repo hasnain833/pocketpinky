@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendPaymentConfirmationEmail } from "@/app/auth/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -39,8 +40,15 @@ export async function POST(req: Request) {
             const session = event.data.object as Stripe.Checkout.Session;
             const userId = session.client_reference_id || session.metadata?.userId;
             const productId = session.metadata?.productId;
+            const customerEmail = session.customer_details?.email;
 
-            console.log(`Payment successful for session ID: ${session.id}, User: ${userId}, Product: ${productId}`);
+            console.log(`Payment successful for session ID: ${session.id}, User: ${userId}, Product: ${productId}, Email: ${customerEmail}`);
+
+            if (customerEmail) {
+                // Send confirmation email asynchronously with specific product ID
+                sendPaymentConfirmationEmail(customerEmail, productId || 'premium')
+                    .catch(err => console.error('Failed to send payment email:', err));
+            }
 
             if (userId && productId === 'premium') {
                 try {
@@ -66,8 +74,7 @@ export async function POST(req: Request) {
                                 subscription_status: subscriptionStatus,
                                 subscription_end: subscriptionEnd,
                                 stripe_customer_id: session.customer as string | null,
-                                stripe_subscription_id: (session.subscription as string) || null,
-                                cancel_at_period_end: false,
+                                stripe_subscription_id: session.subscription as string | null,
                             },
                             { onConflict: "id" }
                         );
@@ -107,10 +114,30 @@ export async function POST(req: Request) {
                         .update({
                             subscription_status: updatedSubscription.status,
                             subscription_end: updatedSubscription.current_period_end,
-                            cancel_at_period_end: updatedSubscription.cancel_at_period_end,
+                            stripe_subscription_id: updatedSubscription.id,
                         })
                         .eq("id", profiles.id);
-                    console.log(`Updated profile ${profiles.id} subscription status to: ${updatedSubscription.status}, cancel_at_period_end: ${updatedSubscription.cancel_at_period_end}`);
+                    console.log(`Updated profile ${profiles.id} subscription status to: ${updatedSubscription.status}`);
+
+                    // Send Webhook to Botpress for updates as well (covers trial to active, etc.)
+                    const botpressWebhookUrl = process.env.BOTPRESS_WEBHOOK_URL;
+                    if (botpressWebhookUrl) {
+                        try {
+                            const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
+                            await fetch(botpressWebhookUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    userId: profiles.id,
+                                    email: customer.email,
+                                    action: 'subscription_updated',
+                                    status: updatedSubscription.status
+                                })
+                            });
+                        } catch (err) {
+                            console.error('Failed to send update webhook to Botpress:', err);
+                        }
+                    }
                 }
             } catch (err) {
                 console.error("Failed to update subscription status:", err);
@@ -138,10 +165,32 @@ export async function POST(req: Request) {
                             plan: "free",
                             subscription_status: null,
                             subscription_end: null,
-                            stripe_subscription_id: null,
                         })
                         .eq("id", profiles.id);
                     console.log(`Reverted profile ${profiles.id} to free plan`);
+
+                    // Send Webhook to Botpress to downgrade the user when subscription expires
+                    const botpressWebhookUrl = process.env.BOTPRESS_WEBHOOK_URL;
+                    if (botpressWebhookUrl && profiles.id) {
+                        try {
+                            // Get customer email from Stripe for better identification
+                            const customer = await stripe.customers.retrieve(deletedCustomerId) as Stripe.Customer;
+                            
+                            await fetch(botpressWebhookUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    userId: profiles.id, // Supabase ID mapped to Botpress User ID
+                                    email: customer.email,
+                                    action: 'cancel_subscription' // Uses the same action for both explicit cancellation and Stripe expiry
+                                })
+                            });
+                            console.log(`Sent cancel_subscription webhook to Botpress for expired user ${profiles.id} (${customer.email})`);
+                        } catch (err) {
+                            console.error('Failed to send webhook to Botpress for expiry:', err);
+                        }
+                    }
+
                 }
             } catch (err) {
                 console.error("Failed to revert user to free plan:", err);
