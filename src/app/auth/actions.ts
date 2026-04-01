@@ -39,15 +39,15 @@ const emailWrapper = (content: string) => `
     </div>
 `;
 
-// Create SendGrid transporter
-const createSendGridTransporter = () => {
+// Create Brevo transporter
+const createBrevoTransporter = () => {
     return nodemailer.createTransport({
-        host: "smtp.sendgrid.net",
+        host: "smtp-relay.brevo.com",
         port: 587,
         secure: false, // true for 465, false for other ports
         auth: {
-            user: "apikey", // This is literally the string "apikey" for SendGrid
-            pass: process.env.SENDGRID_API_KEY,
+            user: process.env.BREVO_SMTP_USER, // Your Brevo login email
+            pass: process.env.BREVO_SMTP_KEY, // Your Brevo SMTP key
         },
     });
 };
@@ -118,17 +118,17 @@ export async function handleSignUp({
         console.log('Token hash flow used');
         console.log('Action link generated successfully');
 
-        // 3. Send email via SendGrid SMTP
-        if (!process.env.SENDGRID_API_KEY) {
-            throw new Error('SendGrid API key not configured');
+        // 3. Send email via Brevo SMTP
+        if (!process.env.BREVO_SMTP_KEY || !process.env.BREVO_SMTP_USER) {
+            throw new Error('Brevo SMTP credentials not configured (BREVO_SMTP_USER & BREVO_SMTP_KEY)');
         }
 
-        const transporter = createSendGridTransporter();
+        const transporter = createBrevoTransporter();
 
-        const mailOptions = {
+        const sendResult = await transporter.sendMail({
             from: {
                 name: "Pinky Pill",
-                address: process.env.SENDGRID_FROM_EMAIL || "noreply@pinkypill.com"
+                address: process.env.BREVO_FROM_EMAIL || "noreply@pinkypill.com"
             },
             to: email,
             subject: "Confirm your signup | Pinky Pill",
@@ -154,11 +154,10 @@ export async function handleSignUp({
                     cid: 'logo'
                 }
             ]
-        };
+        });
 
-        console.log('[Signup] Attempting to send confirmation email via SendGrid to:', email);
-        const sendResult = await transporter.sendMail(mailOptions);
-        console.log('[Signup] SendGrid response:', sendResult);
+        console.log('[Signup] Attempting to send confirmation email via Brevo to:', email);
+        console.log('[Signup] Brevo response:', sendResult);
 
         return { success: true, message: "Check your email for the confirmation link." };
     } catch (err: any) {
@@ -170,8 +169,8 @@ export async function handleSignUp({
 export async function sendPaymentConfirmationEmail(email: string, productId: string = "premium") {
     console.log('[PaymentEmail] Starting to send confirmation email for:', email, 'Product:', productId);
     try {
-        if (!process.env.SENDGRID_API_KEY) {
-            throw new Error('SendGrid API key not configured');
+        if (!process.env.BREVO_SMTP_KEY || !process.env.BREVO_SMTP_USER) {
+            throw new Error('Brevo SMTP credentials not configured');
         }
 
         const PRODUCT_TEMPLATES: Record<string, { subject: string, title: string, body: string, features: string[] }> = {
@@ -202,12 +201,12 @@ export async function sendPaymentConfirmationEmail(email: string, productId: str
         };
 
         const template = PRODUCT_TEMPLATES[productId] || PRODUCT_TEMPLATES.premium;
-        const transporter = createSendGridTransporter();
+        const transporter = createBrevoTransporter();
 
         const mailOptions = {
             from: {
                 name: "Pinky Pill",
-                address: process.env.SENDGRID_FROM_EMAIL || "noreply@pinkypill.com"
+                address: process.env.BREVO_FROM_EMAIL || "noreply@pinkypill.com"
             },
             to: email,
             subject: template.subject,
@@ -283,17 +282,17 @@ export async function handleResetPassword(email: string) {
         console.log('Token hash flow used for recovery');
         console.log('Recovery link generated successfully');
 
-        // 2. Send email via SendGrid SMTP
-        if (!process.env.SENDGRID_API_KEY) {
-            throw new Error('SendGrid API key not configured');
+        // 2. Send email via Brevo SMTP
+        if (!process.env.BREVO_SMTP_KEY || !process.env.BREVO_SMTP_USER) {
+            throw new Error('Brevo SMTP credentials not configured');
         }
 
-        const transporter = createSendGridTransporter();
+        const transporter = createBrevoTransporter();
 
         const mailOptions = {
             from: {
                 name: "Pinky Pill",
-                address: process.env.SENDGRID_FROM_EMAIL || "noreply@pinkypill.com" // Set your verified sender email
+                address: process.env.BREVO_FROM_EMAIL || "noreply@pinkypill.com" // Set your verified sender email
             },
             to: email,
             subject: "Reset your password | Pinky Pill",
@@ -321,7 +320,8 @@ export async function handleResetPassword(email: string) {
             ]
         };
 
-        await transporter.sendMail(mailOptions);
+        const sendResult = await transporter.sendMail(mailOptions);
+        console.log('Brevo response:', sendResult);
 
         return { success: true, message: "Check your email for the password reset link." };
     } catch (err: any) {

@@ -117,7 +117,27 @@ export async function POST(req: Request) {
                             stripe_subscription_id: updatedSubscription.id,
                         })
                         .eq("id", profiles.id);
-                    console.log(`Updated profile ${profiles.id} subscription status to: ${updatedSubscription.status}, cancel_at_period_end: ${updatedSubscription.cancel_at_period_end}`);
+                    console.log(`Updated profile ${profiles.id} subscription status to: ${updatedSubscription.status}`);
+
+                    // Send Webhook to Botpress for updates as well (covers trial to active, etc.)
+                    const botpressWebhookUrl = process.env.BOTPRESS_WEBHOOK_URL;
+                    if (botpressWebhookUrl) {
+                        try {
+                            const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
+                            await fetch(botpressWebhookUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    userId: profiles.id,
+                                    email: customer.email,
+                                    action: 'subscription_updated',
+                                    status: updatedSubscription.status
+                                })
+                            });
+                        } catch (err) {
+                            console.error('Failed to send update webhook to Botpress:', err);
+                        }
+                    }
                 }
             } catch (err) {
                 console.error("Failed to update subscription status:", err);
@@ -148,6 +168,29 @@ export async function POST(req: Request) {
                         })
                         .eq("id", profiles.id);
                     console.log(`Reverted profile ${profiles.id} to free plan`);
+
+                    // Send Webhook to Botpress to downgrade the user when subscription expires
+                    const botpressWebhookUrl = process.env.BOTPRESS_WEBHOOK_URL;
+                    if (botpressWebhookUrl && profiles.id) {
+                        try {
+                            // Get customer email from Stripe for better identification
+                            const customer = await stripe.customers.retrieve(deletedCustomerId) as Stripe.Customer;
+                            
+                            await fetch(botpressWebhookUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    userId: profiles.id, // Supabase ID mapped to Botpress User ID
+                                    email: customer.email,
+                                    action: 'cancel_subscription' // Uses the same action for both explicit cancellation and Stripe expiry
+                                })
+                            });
+                            console.log(`Sent cancel_subscription webhook to Botpress for expired user ${profiles.id} (${customer.email})`);
+                        } catch (err) {
+                            console.error('Failed to send webhook to Botpress for expiry:', err);
+                        }
+                    }
+
                 }
             } catch (err) {
                 console.error("Failed to revert user to free plan:", err);
