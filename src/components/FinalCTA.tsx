@@ -11,7 +11,8 @@ export const FinalCTA = () => {
                     Your first conversation with Pinky is free. No signup, no credit card.
                 </p>
                 <a
-                    href="/#pricing"
+                    href={chatbotUrl}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="inline-block bg-[hsl(var(--gold))] text-[hsl(var(--charcoal))] px-9 py-4 text-sm font-semibold tracking-wide uppercase rounded-sm transition-all duration-300 hover:bg-[hsl(var(--gold-light))] hover:-translate-y-0.5"
                 >

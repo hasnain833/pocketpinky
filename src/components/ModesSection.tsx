@@ -29,7 +29,8 @@ export const ModesSection = () => {
                 {modes.map((mode, index) => (
                     <a
                         key={index}
-                        href="#"
+                        href={chatbotUrl}
+                        target="_blank"
                         rel="noopener noreferrer"
                         className={`bg-white p-8 rounded transition-all duration-300 border ${mode.featured
                             ? 'border-2 border-[hsl(var(--gold))] bg-[hsl(var(--gold-pale))]'
