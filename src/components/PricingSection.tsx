@@ -93,12 +93,16 @@ export const PricingSection = () => {
         isDestructive: true,
         onConfirm: async () => {
           setIsCheckingOut(true);
+
           try {
             const response = await fetch("/api/cancel-subscription", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
               },
+              body: JSON.stringify({
+                conversationIds: (window as any).pinkyAllBotpressConversationIds || []
+              }),
             });
 
             const data = await response.json();
@@ -107,17 +111,26 @@ export const PricingSection = () => {
               setIsPremium(false);
               setSubscriptionStatus("canceled");
               setIsCheckingOut(false);
-
+              
               setConfirmDialog({
                 isOpen: true,
                 title: "Subscription Cancelled",
                 description: data.message,
                 onConfirm: () => {
-                  setConfirmDialog({ ...confirmDialog, isOpen: false });
+                    // Forcefully wipe all Botpress conversation history from the browser
+                    for (let i = localStorage.length - 1; i >= 0; i--) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith('bp-webchat')) {
+                            localStorage.removeItem(key);
+                        }
+                    }
+                    // Reload the page to drop the user into a brand new chat sequence
+                    window.location.reload();
                 },
               });
             } else {
               console.error("Cancellation error:", data.error);
+              
               setConfirmDialog({
                 isOpen: true,
                 title: "Cancellation Failed",
@@ -128,6 +141,7 @@ export const PricingSection = () => {
             }
           } catch (error) {
             console.error("Cancellation error:", error);
+            
             setConfirmDialog({
               isOpen: true,
               title: "Cancellation Failed",
