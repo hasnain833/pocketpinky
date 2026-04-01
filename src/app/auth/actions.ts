@@ -150,7 +150,7 @@ export async function handleSignUp({
             attachments: [
                 {
                     filename: 'pinky.png',
-                    path: path.join(process.cwd(), 'public', 'logos', 'pinky.png'),
+                    path: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/logos/pinky.png`,
                     cid: 'logo'
                 }
             ]
@@ -233,7 +233,7 @@ export async function sendPaymentConfirmationEmail(email: string, productId: str
             attachments: [
                 {
                     filename: 'pinky.png',
-                    path: path.join(process.cwd(), 'public', 'logos', 'pinky.png'),
+                    path: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/logos/pinky.png`,
                     cid: 'logo'
                 }
             ]
@@ -314,7 +314,7 @@ export async function handleResetPassword(email: string) {
             attachments: [
                 {
                     filename: 'pinky.png',
-                    path: path.join(process.cwd(), 'public', 'logos', 'pinky.png'),
+                    path: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/logos/pinky.png`,
                     cid: 'logo'
                 }
             ]
