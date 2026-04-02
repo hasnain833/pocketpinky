@@ -32,7 +32,7 @@ export async function GET(req: Request) {
             .eq("id", user.id)
             .maybeSingle();
 
-        console.log(`[Subscription API] DB Response for ${user.id}:`, { profile, error });
+        // console.log(`[Subscription API] DB Response for ${user.id}:`, { profile, error });
 
         if (error) {
             console.error("check-subscription profiles error:", error);
@@ -49,10 +49,11 @@ export async function GET(req: Request) {
         let plan = rawPlan.toLowerCase();
         let isSubscribed = plan === "premium";
         if (isSubscribed && subscriptionEnd) {
-            const now = Math.floor(Date.now() / 1000);
+            const now = new Date();
+            const expiry = new Date(subscriptionEnd);
 
-            if (now > subscriptionEnd) {
-                console.log(`[Subscription API] User ${user.id} has expired (Timestamp: ${subscriptionEnd}). Overriding status to 'free'.`);
+            if (now > expiry) {
+                // console.log(`[Subscription API] User ${user.id} has expired (End: ${subscriptionEnd}). Overriding status to 'free'.`);
                 plan = "free";
                 isSubscribed = false;
             }

@@ -76,8 +76,9 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
         if (plan === "Free") return { text: "None", color: "text-[hsl(var(--text-muted))]" };
 
         if (subscriptionEnd) {
-            const now = Math.floor(Date.now() / 1000);
-            if (now > (subscriptionEnd as number)) {
+            const now = new Date();
+            const expiry = new Date(subscriptionEnd);
+            if (now > expiry) {
                 return { text: "Expired", color: "text-red-600" };
             }
         }
@@ -133,6 +134,20 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
                                             <span className="text-[hsl(var(--text-secondary))]">Status</span>
                                             <span className={`font-medium ${statusDisplay.color}`}>{statusDisplay.text}</span>
                                         </div>
+                                        {plan !== "Free" && subscriptionEnd && (
+                                            <div className="flex justify-between p-2.5">
+                                                <span className="text-[hsl(var(--text-secondary)) px-0]">
+                                                    {subscriptionStatus === "canceled" ? "Expires on" : "Renews on"}
+                                                </span>
+                                                <span className="font-medium text-[hsl(var(--charcoal))]">
+                                                    {new Date(subscriptionEnd).toLocaleDateString(undefined, { 
+                                                        year: 'numeric', 
+                                                        month: 'short', 
+                                                        day: 'numeric' 
+                                                    })}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                     <Button variant="heroOutline" size="sm" className="w-full text-[10px] h-8 border-[hsl(var(--charcoal))] text-[hsl(var(--charcoal))] hover:bg-[hsl(var(--charcoal))] hover:text-white" asChild>
                                         <a
@@ -153,7 +168,7 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
                                             <Bell className="w-3.5 h-3.5 text-[hsl(var(--gold))]" />
                                             Preferences
                                         </div>
-                                         <div className="bg-white border border-[hsl(var(--divider))] rounded-lg p-2.5 flex items-center justify-between">
+                                        <div className="bg-white border border-[hsl(var(--divider))] rounded-lg p-2.5 flex items-center justify-between">
                                             <div>
                                                 <p className="text-sm font-medium text-[hsl(var(--charcoal))]">Newsletter</p>
                                                 <p className="text-[10px] text-[hsl(var(--text-muted))]">Tips & dating clarity updates</p>
@@ -164,21 +179,23 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
                                                 className="scale-[0.7] data-[state=checked]:bg-[hsl(var(--gold))]"
                                             />
                                         </div>
-
-                                        {/* User ID for Testing/Support */}
-                                        <div className="bg-[hsl(var(--charcoal))]/5 border border-[hsl(var(--divider))] rounded-lg p-2.5">
-                                            <p className="text-[10px] text-[hsl(var(--text-muted))] uppercase font-semibold mb-1">Account ID</p>
-                                            <p className="text-[10px] font-mono text-[hsl(var(--text-secondary))] break-all select-all">{userId}</p>
-                                        </div>
                                     </div>
                                 </div>
 
                                 {/* Secondary Actions */}
                                 <div className="pt-3 border-t border-[hsl(var(--divider))] grid grid-cols-2 gap-2">
-                                    <Button variant="ghost" size="sm" className="text-[10px] text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--pink-accent))] h-8 px-2" asChild>
-                                        <a href="/#chatbot" onClick={onClose} className="flex items-center gap-2">
+                                    <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="text-[10px] text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--pink-accent))] h-8 px-2" 
+                                        onClick={() => {
+                                            onClose();
+                                            window.dispatchEvent(new CustomEvent('open-pinky-chat'));
+                                        }}
+                                    >
+                                        <div className="flex items-center gap-2">
                                             <MessageCircle size={14} /> Help Chat
-                                        </a>
+                                        </div>
                                     </Button>
                                     <Button variant="ghost" size="sm" className="text-[10px] text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--charcoal))] h-8 px-2" onClick={onSignOut}>
                                         <LogOut size={14} className="mr-1.5" /> Log Out

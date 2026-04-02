@@ -35,8 +35,8 @@ export async function POST(req: Request) {
     }
 
     // Handle the event
-    switch (event.type) {
-        case "checkout.session.completed":
+    switch (event.type as string) {
+        case "checkout.session.completed": {
             const session = event.data.object as Stripe.Checkout.Session;
             const userId = session.client_reference_id || session.metadata?.userId;
             const productId = session.metadata?.productId;
@@ -60,9 +60,21 @@ export async function POST(req: Request) {
 
                     if (session.subscription) {
                         const subscription: any = await stripe.subscriptions.retrieve(session.subscription as string);
+                        
+                        // DEEP DEBUG LOG - Keeping for now to verify the fix
+                        console.log(`[Stripe Debug] Full Subscription Object for ${subscription.id}:`, JSON.stringify(subscription, null, 2));
+
                         subscriptionStatus = subscription.status;
-                        subscriptionEnd = subscription.current_period_end || null;
-                        console.log(`[Stripe Webhook] Retrieved subscription: ${subscription.id}, current_period_end: ${subscriptionEnd}`);
+                        
+                        // Clover-version fix: Access current_period_end from the first item if missing at top level
+                        // Fallback: If both are missing, default to 31 days from the subscription start (start_date)
+                        const rawEnd = subscription.current_period_end || 
+                                       subscription.items?.data?.[0]?.current_period_end;
+                        
+                        const seconds = rawEnd || (subscription.start_date ? subscription.start_date + (31 * 24 * 60 * 60) : Math.floor(Date.now() / 1000) + (31 * 24 * 60 * 60));
+                        subscriptionEnd = new Date(seconds * 1000).toISOString();
+                                          
+                        console.log(`[Stripe Webhook] Calculated subscriptionEnd: ${subscriptionEnd} (Raw top-level: ${subscription.current_period_end})`);
                     } else {
                         console.warn(`[Stripe Webhook] Session ${session.id} is missing subscription ID.`);
                     }
@@ -97,8 +109,9 @@ export async function POST(req: Request) {
                 console.log(`One-time purchase for product: ${productId}. No plan update needed.`);
             }
             break;
+        }
 
-        case "customer.subscription.updated":
+        case "customer.subscription.updated": {
             const updatedSubscription: any = event.data.object;
             const customerId = updatedSubscription.customer;
 
@@ -114,15 +127,20 @@ export async function POST(req: Request) {
                     .maybeSingle();
 
                 if (profiles?.id) {
+                    const rawEnd = updatedSubscription.current_period_end || 
+                                          updatedSubscription.items?.data?.[0]?.current_period_end || 
+                                          null;
+                    const subscriptionEnd = rawEnd ? new Date(rawEnd * 1000).toISOString() : null;
+                                              
                     await supabaseAdmin
                         .from("profiles")
                         .update({
                             subscription_status: updatedSubscription.status,
-                            subscription_end: updatedSubscription.current_period_end || null,
+                            subscription_end: subscriptionEnd,
                             stripe_subscription_id: updatedSubscription.id,
                         })
                         .eq("id", profiles.id);
-                    console.log(`Updated profile ${profiles.id} subscription status to: ${updatedSubscription.status}`);
+                    console.log(`Updated profile ${profiles.id} status to ${updatedSubscription.status}, end to ${subscriptionEnd}`);
 
                     // Send Webhook to Botpress for updates as well (covers trial to active, etc.)
                     const botpressWebhookUrl = process.env.BOTPRESS_WEBHOOK_URL;
@@ -148,8 +166,9 @@ export async function POST(req: Request) {
                 console.error("Failed to update subscription status:", err);
             }
             break;
+        }
 
-        case "customer.subscription.deleted":
+        case "customer.subscription.deleted": {
             const deletedSubscription: any = event.data.object;
             const deletedCustomerId = deletedSubscription.customer;
 
@@ -201,46 +220,73 @@ export async function POST(req: Request) {
                 console.error("Failed to revert user to free plan:", err);
             }
             break;
+        }
 
         case "invoice.paid":
         case "invoice.payment_succeeded":
+        case "invoice_payment.paid":
+        case "invoice_payment.succeeded": {
             const invoice = event.data.object as any;
-            console.log(`[Stripe Webhook] Invoice paid: ${invoice.id}, Customer: ${invoice.customer}`);
+            console.log(`[Stripe Webhook] Invoice paid (${event.type}): ${invoice.id}, Customer: ${invoice.customer}`);
 
             if (invoice.customer && invoice.subscription) {
                 try {
                     const supabaseAdmin = createAdminClient();
                     const subscription: any = await stripe.subscriptions.retrieve(invoice.subscription as string);
 
-                    // Find profile by stored stripe_customer_id
-                    const { data: profiles } = await supabaseAdmin
+                    // 1. Try to find profile by stored stripe_customer_id
+                    let { data: profile } = await supabaseAdmin
                         .from("profiles")
                         .select("id")
                         .eq("stripe_customer_id", invoice.customer as string)
                         .maybeSingle();
 
-                    if (profiles?.id) {
+                    // 2. FALLBACK: If not found (common for new users), find by email
+                    if (!profile) {
+                        const customer = await stripe.customers.retrieve(invoice.customer as string) as Stripe.Customer;
+                        if (customer.email) {
+                            console.log(`[Stripe Webhook] Customer ID not linked yet. Trying email fallback: ${customer.email}`);
+                            const { data: emailProfile } = await supabaseAdmin
+                                .from("profiles")
+                                .select("id")
+                                .eq("email", customer.email)
+                                .maybeSingle();
+                            profile = emailProfile;
+                        }
+                    }
+
+                    if (profile?.id) {
+                        const rawEnd = subscription.current_period_end || 
+                                       subscription.items?.data?.[0]?.current_period_end;
+                        
+                        const seconds = rawEnd || (subscription.start_date ? subscription.start_date + (31 * 24 * 60 * 60) : Math.floor(Date.now() / 1000) + (31 * 24 * 60 * 60));
+                        const subscriptionEnd = new Date(seconds * 1000).toISOString();
+                                              
                         const { error: updateError } = await supabaseAdmin
                             .from("profiles")
                             .update({
                                 subscription_status: subscription.status,
-                                subscription_end: subscription.current_period_end || null,
+                                subscription_end: subscriptionEnd,
+                                stripe_customer_id: invoice.customer as string, // Link it now if it wasn't
                             })
-                            .eq("id", profiles.id);
+                            .eq("id", profile.id);
 
                         if (updateError) {
-                            console.error(`[Stripe Webhook] Error updating profile ${profiles.id} on invoice paid:`, updateError);
+                            console.error(`[Stripe Webhook] Error updating profile ${profile.id} on invoice paid:`, updateError);
                         } else {
-                            console.log(`[Stripe Webhook] Successfully extended subscription for user ${profiles.id} to ${subscription.current_period_end}`);
+                            console.log(`[Stripe Webhook] Successfully sync'd subscription for user ${profile.id} to ${subscriptionEnd}`);
                         }
+                    } else {
+                        console.warn(`[Stripe Webhook] Could not find profile for customer ${invoice.customer} or email.`);
                     }
                 } catch (err) {
                     console.error("[Stripe Webhook] Failed to handle invoice.paid:", err);
                 }
             }
             break;
+        }
 
-        case "invoice.payment_failed":
+        case "invoice.payment_failed": {
             const failedInvoice = event.data.object as any;
             console.log(`[Stripe Webhook] Invoice payment failed: ${failedInvoice.id}, Customer: ${failedInvoice.customer}`);
 
@@ -268,6 +314,20 @@ export async function POST(req: Request) {
                     console.error("[Stripe Webhook] Failed to handle invoice.payment_failed:", err);
                 }
             }
+            break;
+        }
+
+        case "charge.succeeded":
+        case "payment_method.attached":
+        case "customer.subscription.created":
+        case "payment_intent.succeeded":
+        case "payment_intent.created":
+        case "invoice.created":
+        case "invoice.finalized":
+        case "invoice.updated":
+            // These are standard lifecycle events we don't need to act on specifically, 
+            // but we handle them here to keep the logs clean.
+            console.log(`[Stripe Webhook] Acknowledged: ${event.type}`);
             break;
 
         default:

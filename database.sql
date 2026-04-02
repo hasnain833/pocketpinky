@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   full_name TEXT,
   plan TEXT DEFAULT 'free',
   subscription_status TEXT,
-  subscription_end BIGINT,
+  subscription_end TIMESTAMPTZ,
   stripe_customer_id TEXT,
   stripe_subscription_id TEXT,
   auth_provider TEXT,

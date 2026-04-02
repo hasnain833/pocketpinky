@@ -28,7 +28,7 @@ export const BotpressWebchat = () => {
         const updateIdentity = (session: any) => {
             const isAuth = !!session;
             const currentUser = session?.user ?? null;
-            
+
             setUser(currentUser);
             if (typeof window !== 'undefined') {
                 window.isPinkyAuthenticated = isAuth;
@@ -49,7 +49,7 @@ export const BotpressWebchat = () => {
         const updateShield = () => {
             const isAuth = (window as any).isPinkyAuthenticated;
             let shield = document.getElementById(shieldId);
-            
+
             if (!isAuth) {
                 if (!shield) {
                     shield = document.createElement('div');
@@ -63,7 +63,7 @@ export const BotpressWebchat = () => {
                     shield.onclick = (e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        window.dispatchEvent(new CustomEvent('open-auth-modal', { 
+                        window.dispatchEvent(new CustomEvent('open-auth-modal', {
                             detail: { mode: 'login', message: 'Please log in to chat with Pinky.' }
                         }));
                     };
@@ -88,17 +88,17 @@ export const BotpressWebchat = () => {
         const MAX_RETRIES = 5;
 
         const handler = () => {
-            console.log('[Pinky] Open chat requested');
+            // console.log('[Pinky] Open chat requested');
             const bp = window.botpressWebChat || window.botpressWebchat || window.botpress;
-            
+
             if (!window.isPinkyAuthenticated) {
-                console.log('[Pinky] User not logged in, triggering modal');
+                // console.log('[Pinky] User not logged in, triggering modal');
                 window.dispatchEvent(new CustomEvent('open-auth-modal', { detail: { mode: 'login' } }));
                 return;
             }
 
             if (bp) {
-                console.log('[Pinky] Botpress found, triggering open sequence');
+                // console.log('[Pinky] Botpress found, triggering open sequence');
                 if (bp.open) {
                     bp.open();
                 } else if (bp.sendEvent || bp.sendPayload) {
@@ -156,7 +156,7 @@ export const BotpressWebchat = () => {
         };
 
         syncUser();
-        const interval = setInterval(syncUser, 120000); 
+        const interval = setInterval(syncUser, 120000);
         return () => clearInterval(interval);
     }, [user]);
 
