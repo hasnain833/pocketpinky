@@ -61,29 +61,34 @@ export async function POST(req: Request) {
                     if (session.subscription) {
                         const subscription: any = await stripe.subscriptions.retrieve(session.subscription as string);
                         subscriptionStatus = subscription.status;
-                        subscriptionEnd = subscription.current_period_end;
+                        subscriptionEnd = subscription.current_period_end || null;
+                        console.log(`[Stripe Webhook] Retrieved subscription: ${subscription.id}, current_period_end: ${subscriptionEnd}`);
+                    } else {
+                        console.warn(`[Stripe Webhook] Session ${session.id} is missing subscription ID.`);
                     }
 
                     // Update our own profiles table as the single source of truth
+                    // Ensure we don't overwrite if subscription_end is missing for some reason
+                    const upsertData: any = {
+                        id: userId,
+                        plan: "premium",
+                        subscription_status: subscriptionStatus,
+                        stripe_customer_id: session.customer as string | null,
+                        stripe_subscription_id: session.subscription as string | null,
+                    };
+
+                    if (subscriptionEnd) {
+                        upsertData.subscription_end = subscriptionEnd;
+                    }
+
                     const { error } = await supabaseAdmin
                         .from("profiles")
-                        .upsert(
-                            {
-                                id: userId,
-                                plan: "premium",
-                                subscription_status: subscriptionStatus,
-                                subscription_end: subscriptionEnd,
-                                stripe_customer_id: session.customer as string | null,
-                                stripe_subscription_id: session.subscription as string | null,
-                            },
-                            { onConflict: "id" }
-                        );
+                        .upsert(upsertData, { onConflict: "id" });
 
                     if (error) {
-                        console.error("Error updating user metadata via Admin API:", error);
-                        // Still returning 200 to Stripe as we received the event, but logging the error
+                        console.error("[Stripe Webhook] Supabase upsert error:", error);
                     } else {
-                        console.log(`Successfully updated user ${userId} to premium plan with status: ${subscriptionStatus}`);
+                        console.log(`[Stripe Webhook] Successfully updated user ${userId} to premium. subscriptionEnd: ${subscriptionEnd}`);
                     }
                 } catch (err) {
                     console.error("Failed to update user plan:", err);
@@ -113,7 +118,7 @@ export async function POST(req: Request) {
                         .from("profiles")
                         .update({
                             subscription_status: updatedSubscription.status,
-                            subscription_end: updatedSubscription.current_period_end,
+                            subscription_end: updatedSubscription.current_period_end || null,
                             stripe_subscription_id: updatedSubscription.id,
                         })
                         .eq("id", profiles.id);
@@ -199,11 +204,74 @@ export async function POST(req: Request) {
 
         case "invoice.paid":
         case "invoice.payment_succeeded":
-            console.log(`Invoice paid: ${(event.data.object as Stripe.Invoice).id}`);
+            const invoice = event.data.object as any;
+            console.log(`[Stripe Webhook] Invoice paid: ${invoice.id}, Customer: ${invoice.customer}`);
+
+            if (invoice.customer && invoice.subscription) {
+                try {
+                    const supabaseAdmin = createAdminClient();
+                    const subscription: any = await stripe.subscriptions.retrieve(invoice.subscription as string);
+
+                    // Find profile by stored stripe_customer_id
+                    const { data: profiles } = await supabaseAdmin
+                        .from("profiles")
+                        .select("id")
+                        .eq("stripe_customer_id", invoice.customer as string)
+                        .maybeSingle();
+
+                    if (profiles?.id) {
+                        const { error: updateError } = await supabaseAdmin
+                            .from("profiles")
+                            .update({
+                                subscription_status: subscription.status,
+                                subscription_end: subscription.current_period_end || null,
+                            })
+                            .eq("id", profiles.id);
+
+                        if (updateError) {
+                            console.error(`[Stripe Webhook] Error updating profile ${profiles.id} on invoice paid:`, updateError);
+                        } else {
+                            console.log(`[Stripe Webhook] Successfully extended subscription for user ${profiles.id} to ${subscription.current_period_end}`);
+                        }
+                    }
+                } catch (err) {
+                    console.error("[Stripe Webhook] Failed to handle invoice.paid:", err);
+                }
+            }
+            break;
+
+        case "invoice.payment_failed":
+            const failedInvoice = event.data.object as any;
+            console.log(`[Stripe Webhook] Invoice payment failed: ${failedInvoice.id}, Customer: ${failedInvoice.customer}`);
+
+            if (failedInvoice.customer) {
+                try {
+                    const supabaseAdmin = createAdminClient();
+                    const { data: profiles } = await supabaseAdmin
+                        .from("profiles")
+                        .select("id")
+                        .eq("stripe_customer_id", failedInvoice.customer as string)
+                        .maybeSingle();
+
+                    if (profiles?.id) {
+                        // Mark as past_due so the user sees a warning, but don't cut them off yet (Standard Industry Practice)
+                        await supabaseAdmin
+                            .from("profiles")
+                            .update({
+                                subscription_status: "past_due",
+                            })
+                            .eq("id", profiles.id);
+                        
+                        console.log(`[Stripe Webhook] Flagged user ${profiles.id} as past_due due to failed payment.`);
+                    }
+                } catch (err) {
+                    console.error("[Stripe Webhook] Failed to handle invoice.payment_failed:", err);
+                }
+            }
             break;
 
         default:
-            console.log(`Unhandled event type ${event.type}`);
+            console.log(`[Stripe Webhook] Unhandled event type ${event.type}`);
     }
 
     return NextResponse.json({ received: true });

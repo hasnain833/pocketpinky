@@ -33,9 +33,10 @@ interface AccountModalProps {
 export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) => {
     const [loading, setLoading] = useState(true);
     const [userEmail, setUserEmail] = useState<string | null>(null);
+    const [userId, setUserId] = useState<string | null>(null);
     const [plan, setPlan] = useState<string>("Free");
     const [subscriptionStatus, setSubscriptionStatus] = useState<string>("active");
-    const [subscriptionEnd, setSubscriptionEnd] = useState<number | null>(null);
+    const [subscriptionEnd, setSubscriptionEnd] = useState<string | number | null>(null);
     const [newsletterSubscribed, setNewsletterSubscribed] = useState(true);
 
     useEffect(() => {
@@ -48,6 +49,7 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
         supabase.auth.refreshSession().then(async ({ data: { session } }) => {
             if (session?.user) {
                 setUserEmail(session.user.email ?? null);
+                setUserId(session.user.id ?? null);
 
                 // Load plan and subscription details from profiles table (single source of truth)
                 const { data: profile } = await supabase
@@ -62,7 +64,7 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
                 const status = (profile?.subscription_status as string | undefined) || "active";
                 setSubscriptionStatus(status);
 
-                const end = (profile?.subscription_end as number | null) ?? null;
+                const end = profile?.subscription_end ?? null;
                 setSubscriptionEnd(end);
             }
             setLoading(false);
@@ -71,11 +73,11 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
 
     // Determine display status
     const getStatusDisplay = () => {
-        if (plan === "Free") return { text: "Active", color: "text-green-600" };
+        if (plan === "Free") return { text: "None", color: "text-[hsl(var(--text-muted))]" };
 
         if (subscriptionEnd) {
             const now = Math.floor(Date.now() / 1000);
-            if (now > subscriptionEnd) {
+            if (now > (subscriptionEnd as number)) {
                 return { text: "Expired", color: "text-red-600" };
             }
         }
@@ -151,7 +153,7 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
                                             <Bell className="w-3.5 h-3.5 text-[hsl(var(--gold))]" />
                                             Preferences
                                         </div>
-                                        <div className="bg-white border border-[hsl(var(--divider))] rounded-lg p-2.5 flex items-center justify-between">
+                                         <div className="bg-white border border-[hsl(var(--divider))] rounded-lg p-2.5 flex items-center justify-between">
                                             <div>
                                                 <p className="text-sm font-medium text-[hsl(var(--charcoal))]">Newsletter</p>
                                                 <p className="text-[10px] text-[hsl(var(--text-muted))]">Tips & dating clarity updates</p>
@@ -161,6 +163,12 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
                                                 onCheckedChange={setNewsletterSubscribed}
                                                 className="scale-[0.7] data-[state=checked]:bg-[hsl(var(--gold))]"
                                             />
+                                        </div>
+
+                                        {/* User ID for Testing/Support */}
+                                        <div className="bg-[hsl(var(--charcoal))]/5 border border-[hsl(var(--divider))] rounded-lg p-2.5">
+                                            <p className="text-[10px] text-[hsl(var(--text-muted))] uppercase font-semibold mb-1">Account ID</p>
+                                            <p className="text-[10px] font-mono text-[hsl(var(--text-secondary))] break-all select-all">{userId}</p>
                                         </div>
                                     </div>
                                 </div>

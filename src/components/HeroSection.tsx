@@ -64,14 +64,12 @@ export const HeroSection = () => {
 
             {/* CTA Buttons */}
             <motion.div variants={itemVariants} className="flex flex-wrap gap-4 mb-8">
-              <a
-                href={chatbotUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('open-pinky-chat'))}
                 className="bg-[hsl(var(--charcoal))] text-[hsl(var(--cream))] px-8 py-4 text-sm font-semibold tracking-[0.5px] uppercase rounded-sm hover:bg-[hsl(var(--wine))] transition-all duration-300 hover:-translate-y-1"
               >
                 Try Pinky Free
-              </a>
+              </button>
               <a
                 href="#modes"
                 className="bg-transparent text-[hsl(var(--charcoal))] px-8 py-4 text-sm font-semibold tracking-[0.5px] uppercase border border-[hsl(var(--charcoal))] rounded-sm hover:bg-[hsl(var(--charcoal))] hover:text-[hsl(var(--cream))] transition-all duration-300"

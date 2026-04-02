@@ -7,6 +7,7 @@ import { ArrowRight, Check, Plus, Minus } from "lucide-react";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { createClient } from "@/lib/supabase/client";
 import { AuthModal } from "@/components/AuthModal";
+import { Footer } from "@/components/Footer";
 
 const AccordionItem = ({ title, content }: { title: string; content: string }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -789,34 +790,7 @@ export default function GuidesPage() {
                 </div>
             </section >
 
-            {/* Footer Branding - Premium Dark */}
-            < section className="py-20 bg-[hsl(var(--charcoal))] border-t border-white/5 text-center relative z-10" >
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    whileInView={{ opacity: 1 }}
-                    viewport={{ once: true }}
-                    className="max-w-[1200px] mx-auto px-[5%]"
-                >
-                    <div className="font-serif text-3xl text-[hsl(var(--cream))] mb-10 tracking-[1px] opacity-90">The Pink Pill</div>
-                    <div className="flex flex-wrap justify-center gap-10 md:gap-16 mb-12">
-                        {["About", "Privacy Policy", "Terms of Service", "Contact"].map((link, i) => (
-                            <Link
-                                key={i}
-                                href={`/${link.toLowerCase().replace(/ /g, '-')}`}
-                                className="text-white/40 text-xs uppercase tracking-[3px] font-bold hover:text-[hsl(var(--gold))] transition-all duration-300 relative group overflow-hidden"
-                            >
-                                <span className="relative z-10">{link}</span>
-                                <span className="absolute bottom-0 left-0 w-0 h-[1px] bg-[hsl(var(--gold))] transition-all duration-300 group-hover:w-full" />
-                            </Link>
-                        ))}
-                    </div>
-                    <div className="w-20 h-[1px] bg-white/10 mx-auto mb-10" />
-                    <p className="text-[0.65rem] text-white/20 uppercase tracking-[5px] max-w-lg mx-auto leading-loose">
-                        © 2025 Christelyn Karazin / Pink Pill. All rights reserved. <br />
-                        For personal use only. Distribution of this content is strictly prohibited.
-                    </p>
-                </motion.div>
-            </section >
+            <Footer />
 
             <AuthModal
                 isOpen={authModal.isOpen}

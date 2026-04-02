@@ -34,15 +34,15 @@ export default function ContactPage() {
 
           <div className="bg-plum-light/20 border border-gold/20 rounded-2xl p-6 md:p-8">
             <h2 className="font-serif text-xl text-cream mb-3">Chat with Pinky</h2>
-            <p className="text-cream/80 text-sm mb-4">
+            <p className="text-cream/80 text-sm">
               Have a quick question? Start a conversation with our AI assistant on the homepage.
             </p>
-            <Button variant="hero" size="lg" className="rounded-xl" asChild>
+            {/* <Button variant="hero" size="lg" className="rounded-xl" asChild>
               <Link href="/#chatbot" className="flex items-center gap-2">
                 <MessageCircle size={18} />
                 Open Chat
               </Link>
-            </Button>
+            </Button> */}
           </div>
         </section>
 

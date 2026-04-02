@@ -91,9 +91,8 @@ export async function POST(req: Request) {
             }
         }
 
-        console.log("Creating Stripe Checkout Session with:", {
+        console.log(`[Stripe Checkout] Creating session for User: ${userId} (${userEmail})`, {
             productId,
-            userId,
             stripeCustomerId,
             mode: product.mode,
             priceId: product.priceId

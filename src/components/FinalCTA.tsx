@@ -1,6 +1,6 @@
-export const FinalCTA = () => {
-    const chatbotUrl = "https://cdn.botpress.cloud/webchat/v3.5/shareable.html?configUrl=https://files.bpcontent.cloud/2025/12/22/20/20251222201454-LHAZEGXE.json";
+"use client";
 
+export const FinalCTA = () => {
     return (
         <section className="py-24 px-[5%] bg-[hsl(var(--charcoal))] text-center">
             <div className="max-w-[800px] mx-auto">
@@ -10,14 +10,12 @@ export const FinalCTA = () => {
                 <p className="text-white/70 mb-8 text-lg">
                     Your first conversation with Pinky is free. No signup, no credit card.
                 </p>
-                <a
-                    href={chatbotUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                <button
+                    onClick={() => window.dispatchEvent(new CustomEvent('open-pinky-chat'))}
                     className="inline-block bg-[hsl(var(--gold))] text-[hsl(var(--charcoal))] px-9 py-4 text-sm font-semibold tracking-wide uppercase rounded-sm transition-all duration-300 hover:bg-[hsl(var(--gold-light))] hover:-translate-y-0.5"
                 >
                     Talk to Pinky Now
-                </a>
+                </button>
             </div>
         </section>
     );

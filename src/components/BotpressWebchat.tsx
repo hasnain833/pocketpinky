@@ -1,7 +1,7 @@
 "use client";
 
+import { useEffect, useState, useRef } from "react";
 import Script from "next/script";
-import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 declare global {
@@ -13,126 +13,151 @@ declare global {
         pinkyUserEmail: string | undefined;
         pinkyUserId: string | undefined;
         pinkySubscriptionTier: string | undefined;
-        pinkyBotpressConversationId: string | undefined;
-        pinkyAllBotpressConversationIds: string[] | undefined;
     }
 }
 
 export const BotpressWebchat = () => {
     const [user, setUser] = useState<any>(null);
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
     const configUrl = process.env.NEXT_PUBLIC_BOTPRESS_CONFIG_SCRIPT_URL;
+    const lastSyncedTier = useRef<string | null>(null);
 
     useEffect(() => {
         const supabase = createClient();
         if (!supabase) return;
 
-        supabase.auth.refreshSession().then(({ data: { session } }) => {
-            setIsAuthenticated(!!session);
-            setUser(session?.user ?? null);
-        });
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setIsAuthenticated(!!session);
-            setUser(session?.user ?? null);
-        });
+        const updateIdentity = (session: any) => {
+            const isAuth = !!session;
+            const currentUser = session?.user ?? null;
+            
+            setUser(currentUser);
+            if (typeof window !== 'undefined') {
+                window.isPinkyAuthenticated = isAuth;
+                window.pinkyUserEmail = currentUser?.email;
+                window.pinkyUserId = currentUser?.id;
+            }
+        };
+
+        supabase.auth.refreshSession().then(({ data: { session } }) => updateIdentity(session));
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => updateIdentity(session));
 
         return () => subscription.unsubscribe();
     }, []);
 
+    // GUEST SHIELD: Blocks clicks for unauthenticated users
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            (window as any).isPinkyAuthenticated = !!user;
-            (window as any).pinkyUserEmail = user?.email;
-            (window as any).pinkyUserId = user?.id;
-            (window as any).pinkySubscriptionTier = 'free';
-        }
+        const shieldId = 'pinky-chat-shield';
+        const updateShield = () => {
+            const isAuth = (window as any).isPinkyAuthenticated;
+            let shield = document.getElementById(shieldId);
+            
+            if (!isAuth) {
+                if (!shield) {
+                    shield = document.createElement('div');
+                    shield.id = shieldId;
+                    Object.assign(shield.style, {
+                        position: 'fixed', bottom: '15px', right: '15px',
+                        width: '75px', height: '75px', borderRadius: '50%',
+                        zIndex: '99999',
+                        cursor: 'pointer', backgroundColor: 'transparent'
+                    });
+                    shield.onclick = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        window.dispatchEvent(new CustomEvent('open-auth-modal', { 
+                            detail: { mode: 'login', message: 'Please log in to chat with Pinky.' }
+                        }));
+                    };
+                    document.body.appendChild(shield);
+                }
+            } else {
+                if (shield) shield.remove();
+            }
+        };
+
+        const interval = setInterval(updateShield, 1000);
+        updateShield();
+        return () => {
+            clearInterval(interval);
+            document.getElementById(shieldId)?.remove();
+        };
     }, [user]);
 
+    // SMART LISTENER: Handles early clicks and API expansion
     useEffect(() => {
-        const syncUser = () => {
+        let retryCount = 0;
+        const MAX_RETRIES = 5;
+
+        const handler = () => {
+            console.log('[Pinky] Open chat requested');
             const bp = window.botpressWebChat || window.botpressWebchat || window.botpress;
+            
+            if (!window.isPinkyAuthenticated) {
+                console.log('[Pinky] User not logged in, triggering modal');
+                window.dispatchEvent(new CustomEvent('open-auth-modal', { detail: { mode: 'login' } }));
+                return;
+            }
 
-            if (bp && user) {
-                console.log('Botpress Identifying User:', user.email);
-                let subscriptionTier = 'free';
+            if (bp) {
+                console.log('[Pinky] Botpress found, triggering open sequence');
+                if (bp.open) {
+                    bp.open();
+                } else if (bp.sendEvent || bp.sendPayload) {
+                    const send = bp.sendEvent || bp.sendPayload;
+                    send({ type: 'show' });
+                    setTimeout(() => send({ type: 'open' }), 50);
+                }
+                retryCount = 0; // Reset on success
+            } else if (retryCount < MAX_RETRIES) {
+                console.warn('[Pinky] Botpress not ready yet, retrying in 500ms...');
+                retryCount++;
+                setTimeout(handler, 500);
+            } else {
+                console.error('[Pinky] Botpress failed to load after multiple retries.');
+            }
+        };
 
-                (async () => {
-                    try {
-                        const cacheBuster = Date.now();
-                        const res = await fetch(`/api/check-subscription?userId=${encodeURIComponent(user.id)}&_t=${cacheBuster}`, {
-                            cache: 'no-store',
-                            headers: {
-                                'Cache-Control': 'no-cache',
-                                'Pragma': 'no-cache'
-                            }
-                        });
-                        if (res.ok) {
-                            const data = await res.json();
-                            if (data?.plan) {
-                                subscriptionTier = data.plan;
-                                // console.log('Botpress Debug: Server plan override:', subscriptionTier);
-                            }
-                        }
+        window.addEventListener('open-pinky-chat', handler);
+        return () => window.removeEventListener('open-pinky-chat', handler);
+    }, []);
 
-                        const localTierKey = 'pinky_last_tier';
-                        const previousLocalTier = localStorage.getItem(localTierKey);
+    // SMART SYNC: Only update Botpress if tier actually changes
+    useEffect(() => {
+        const syncUser = async () => {
+            const bp = window.botpressWebChat || window.botpressWebchat || window.botpress;
+            if (!bp || !user) return;
 
-                        if (previousLocalTier && previousLocalTier !== subscriptionTier) {
-                            console.log(`Plan changed: ${previousLocalTier} -> ${subscriptionTier}`);
+            try {
+                const res = await fetch(`/api/check-subscription?userId=${encodeURIComponent(user.id)}`);
+                const data = await res.json();
+                const currentTier = data?.plan || 'free';
 
-                            if (bp.sendEvent) {
-                                bp.sendEvent({
-                                    type: "subscription-updated",
-                                    payload: {
-                                        previousTier: previousLocalTier,
-                                        newTier: subscriptionTier,
-                                        userId: user.id,
-                                        email: user.email
-                                    }
-                                });
-                                console.log('Sent subscription-updated event to Botpress!');
-                            }
+                const previousTier = localStorage.getItem('pinky_last_tier');
+                if (previousTier && previousTier !== currentTier) {
+                    Object.keys(localStorage).forEach(key => {
+                        if (key.startsWith('bp-') || key.includes('botpress')) localStorage.removeItem(key);
+                    });
+                    localStorage.setItem('pinky_last_tier', currentTier);
+                    window.location.reload();
+                    return;
+                }
+                localStorage.setItem('pinky_last_tier', currentTier);
+                window.pinkySubscriptionTier = currentTier;
 
-                            localStorage.setItem(localTierKey, subscriptionTier);
-                        }
-
-                        localStorage.setItem(localTierKey, subscriptionTier);
-
-                    } catch (err) {
-                        console.error('Error calling /api/check-subscription:', err);
-                    }
-
-                    if (typeof window !== 'undefined') {
-                        (window as any).pinkySubscriptionTier = subscriptionTier;
-                    }
-
-                    try {
-                        bp.updateUser({
-                            data: {
-                                externalId: user.id,
-                                email: user.email,
-                                subscriptionTier: subscriptionTier
-                            },
-                            tags: {
-                                email: user.email,
-                                userId: user.id,
-                                subscriptionTier: subscriptionTier
-                            }
-                        });
-                        // console.log('Botpress User Data Updated with tier:', subscriptionTier);
-                    } catch (err) {
-                        console.error('Error calling botpress.updateUser:', err);
-                    }
-                })();
+                if (lastSyncedTier.current !== currentTier) {
+                    bp.updateUser({
+                        data: { externalId: user.id, email: user.email, subscriptionTier: currentTier },
+                        tags: { email: user.email, userId: user.id, subscriptionTier: currentTier }
+                    });
+                    lastSyncedTier.current = currentTier;
+                }
+            } catch (err) {
+                console.error('Botpress Sync Error:', err);
             }
         };
 
         syncUser();
-        const interval = setInterval(syncUser, 10000);
-
-        return () => {
-            clearInterval(interval);
-        };
+        const interval = setInterval(syncUser, 120000); 
+        return () => clearInterval(interval);
     }, [user]);
 
     const initBotpressSettings = `
@@ -142,97 +167,24 @@ export const BotpressWebchat = () => {
                 clearInterval(checkBotpress);
                 
                 bp.on('webchat:initialized', function() {
-                    // console.log('Pinky Chat Initialized');
                     if (window.pinkyUserEmail) {
-                        // console.log('Botpress Script: Syncing Identity', window.pinkyUserEmail);
                         var tier = window.pinkySubscriptionTier || 'free';
                         bp.updateUser({
-                            data: {
-                                email: window.pinkyUserEmail,
-                                externalId: window.pinkyUserId,
-                                subscriptionTier: tier
-                            },
-                            tags: {
-                                email: window.pinkyUserEmail,
-                                subscriptionTier: tier
-                            }
+                            data: { email: window.pinkyUserEmail, externalId: window.pinkyUserId, subscriptionTier: tier },
+                            tags: { email: window.pinkyUserEmail, subscriptionTier: tier }
                         });
                     }
                 });
-
-                // Capture conversation ID by scanning localStorage for 'bp-webchat-message-history-conv_'
-                function captureConversationId() {
-                    try {
-                        var keys = Object.keys(localStorage);
-                        window.pinkyAllBotpressConversationIds = [];
-                        var latestId = null;
-
-                        for (var i = 0; i < keys.length; i++) {
-                            var k = keys[i];
-                            if (k.startsWith('bp-webchat-message-history-conv_')) {
-                                var convId = k.replace('bp-webchat-message-history-conv_', '').trim();
-                                if (convId) {
-                                    window.pinkyAllBotpressConversationIds.push(convId);
-                                    latestId = convId; // Keep the last one as fallback default
-                                }
-                            }
-                        }
-
-                        if (window.pinkyAllBotpressConversationIds.length > 0) {
-                            window.pinkyBotpressConversationId = window.pinkyAllBotpressConversationIds[window.pinkyAllBotpressConversationIds.length - 1];
-                        }
-                    } catch(e) { console.error('Error scanning localStorage for conversationId:', e); }
-                }
-
-                // Try known event names as backup
-                ['conversation', 'conversation:loaded', 'webchat:conversation', 'conversationStarted'].forEach(function(evtName) {
-                    bp.on(evtName, function(data) {
-                        var id = (data && (data.id || data.conversationId));
-                        if (id) {
-                            window.pinkyBotpressConversationId = id;
-                            if (!window.pinkyAllBotpressConversationIds) window.pinkyAllBotpressConversationIds = [];
-                            if (window.pinkyAllBotpressConversationIds.indexOf(id) === -1) {
-                                window.pinkyAllBotpressConversationIds.push(id);
-                            }
-                        }
-                    });
-                });
-
-                // Scan localStorage periodically to catch newly created conversations
-                setInterval(captureConversationId, 5000);
-                setTimeout(captureConversationId, 1000);
 
                 if (typeof bp.on === 'function') {
-                    bp.on('message', function (_message) {
-                        setTimeout(function () {
-                            bp.sendEvent && bp.sendEvent({ type: 'webchat:scrollToBottom' });
-                        }, 250);
+                    bp.on('message', function() {
+                        setTimeout(function() { bp.sendEvent && bp.sendEvent({ type: 'webchat:scrollToBottom' }); }, 250);
                     });
                 }
 
-                window.addEventListener('open-pinky-chat', function() {
-                    bp.sendEvent({ type: 'show' });
-                    bp.sendEvent({ type: 'open' });
-                });
-
                 bp.on('webchat:opened', function() {
-                    console.log('Pinky Chat Opened');
-                    if (window.pinkyUserEmail && bp.updateUser) {
-                        var tier = window.pinkySubscriptionTier || 'free';
-                        bp.updateUser({
-                            data: { 
-                                email: window.pinkyUserEmail,
-                                subscriptionTier: tier
-                            },
-                            tags: { 
-                                email: window.pinkyUserEmail,
-                                subscriptionTier: tier
-                            }
-                        });
-                    }
-                    
                     if (!window.isPinkyAuthenticated) {
-                        bp.sendEvent({ type: 'close' });
+                        bp.sendEvent && bp.sendEvent({ type: 'close' });
                         window.dispatchEvent(new CustomEvent('open-auth-modal', { 
                             detail: { mode: 'login', message: 'Please log in to chat with Pinky.' }
                         }));
@@ -242,28 +194,13 @@ export const BotpressWebchat = () => {
         }, 500);
     `;
 
-    if (!configUrl) {
-        console.error('Botpress config URL is missing!');
-        return null;
-    }
-
-    if (!isAuthenticated) {
-        return null;
-    }
+    if (!configUrl) return null;
 
     return (
-        <>
-            <Script
-                src="https://cdn.botpress.cloud/webchat/v3.6/inject.js"
-                strategy="afterInteractive"
-            />
-            <Script
-                src={configUrl}
-                strategy="afterInteractive"
-            />
-            <Script id="botpress-auto-scroll" strategy="afterInteractive">
-                {initBotpressSettings}
-            </Script>
-        </>
+        <div style={{ display: 'contents' }}>
+            <Script src="https://cdn.botpress.cloud/webchat/v3.6/inject.js" strategy="afterInteractive" />
+            <Script src={configUrl} strategy="afterInteractive" />
+            <Script id="botpress-auto-scroll" strategy="afterInteractive">{initBotpressSettings}</Script>
+        </div>
     );
 };
