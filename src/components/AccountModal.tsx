@@ -37,6 +37,8 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
     const [plan, setPlan] = useState<string>("Free");
     const [subscriptionStatus, setSubscriptionStatus] = useState<string>("active");
     const [subscriptionEnd, setSubscriptionEnd] = useState<string | number | null>(null);
+    const [fullName, setFullName] = useState<string | null>(null);
+    const [memberSince, setMemberSince] = useState<string | null>(null);
     const [newsletterSubscribed, setNewsletterSubscribed] = useState(true);
 
     useEffect(() => {
@@ -54,9 +56,14 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
                 // Load plan and subscription details from profiles table (single source of truth)
                 const { data: profile } = await supabase
                     .from("profiles")
-                    .select("plan, subscription_status, subscription_end")
+                    .select("plan, subscription_status, subscription_end, full_name, created_at")
                     .eq("id", session.user.id)
                     .maybeSingle();
+
+                if (profile) {
+                    setFullName(profile.full_name ?? null);
+                    setMemberSince(profile.created_at ?? null);
+                }
 
                 const userPlan = (profile?.plan as string | undefined) || "free";
                 setPlan(userPlan === "premium" ? "Premium" : "Free");
@@ -114,9 +121,9 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
                         <ScrollArea className="max-h-[70vh] -mx-5 px-5 md:-mx-6 md:px-6">
                             <div className="space-y-4 pb-1">
                                 {/* User Info */}
-                                <div className="bg-white/50 border border-[hsl(var(--divider))] rounded-lg p-3">
-                                    <p className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider font-semibold mb-1">Signed in as</p>
-                                    <p className="text-[hsl(var(--charcoal))] font-medium break-all text-sm">{userEmail}</p>
+                                <div className="bg-white/50 border border-[hsl(var(--divider))] rounded-lg p-3.5 space-y-0.5">
+                                    <h3 className="text-xl font-serif text-[hsl(var(--charcoal))]">{fullName || "User"}</h3>
+                                    <p className="text-xs text-[hsl(var(--text-muted))] font-medium break-all">{userEmail}</p>
                                 </div>
 
                                 {/* Subscription Section */}
@@ -140,25 +147,15 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
                                                     {subscriptionStatus === "canceled" ? "Expires on" : "Renews on"}
                                                 </span>
                                                 <span className="font-medium text-[hsl(var(--charcoal))]">
-                                                    {new Date(subscriptionEnd).toLocaleDateString(undefined, { 
-                                                        year: 'numeric', 
-                                                        month: 'short', 
-                                                        day: 'numeric' 
+                                                    {new Date(subscriptionEnd).toLocaleDateString(undefined, {
+                                                        year: 'numeric',
+                                                        month: 'short',
+                                                        day: 'numeric'
                                                     })}
                                                 </span>
                                             </div>
                                         )}
                                     </div>
-                                    <Button variant="heroOutline" size="sm" className="w-full text-[10px] h-8 border-[hsl(var(--charcoal))] text-[hsl(var(--charcoal))] hover:bg-[hsl(var(--charcoal))] hover:text-white" asChild>
-                                        <a
-                                            href={process.env.NEXT_PUBLIC_STRIPE_CUSTOMER_PORTAL_URL || "#"}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center justify-center gap-2"
-                                        >
-                                            Manage Billing <ExternalLink size={14} />
-                                        </a>
-                                    </Button>
                                 </div>
 
                                 {/* Content & Newsletter */}
@@ -184,10 +181,10 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
 
                                 {/* Secondary Actions */}
                                 <div className="pt-3 border-t border-[hsl(var(--divider))] grid grid-cols-2 gap-2">
-                                    <Button 
-                                        variant="ghost" 
-                                        size="sm" 
-                                        className="text-[10px] text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--pink-accent))] h-8 px-2" 
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-[10px] text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--pink-accent))] h-8 px-2"
                                         onClick={() => {
                                             onClose();
                                             window.dispatchEvent(new CustomEvent('open-pinky-chat'));
