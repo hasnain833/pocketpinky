@@ -113,7 +113,11 @@ export const AuthModal = ({ isOpen, onClose, initialMode = "login" }: AuthModalP
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="bg-[hsl(var(--cream))] border-[hsl(var(--divider))] sm:max-w-[450px] p-0 overflow-hidden">
+            <DialogContent 
+                onInteractOutside={(e) => e.preventDefault()}
+                onEscapeKeyDown={(e) => e.preventDefault()}
+                className="bg-[hsl(var(--cream))] border-[hsl(var(--divider))] sm:max-w-[450px] p-0 overflow-hidden"
+            >
                 <div className="p-5">
                     <DialogHeader className="mb-3">
                         <DialogTitle className="font-serif text-xl text-[hsl(var(--charcoal))] text-center">

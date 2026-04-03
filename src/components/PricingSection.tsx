@@ -22,6 +22,8 @@ export const PricingSection = () => {
     title: string;
     description: string;
     onConfirm: () => void;
+    confirmText?: string;
+    showCancel?: boolean;
     isDestructive?: boolean;
   }>({ isOpen: false, title: "", description: "", onConfirm: () => { } });
 
@@ -100,9 +102,6 @@ export const PricingSection = () => {
               headers: {
                 "Content-Type": "application/json",
               },
-              body: JSON.stringify({
-                conversationIds: (window as any).pinkyAllBotpressConversationIds || []
-              }),
             });
 
             const data = await response.json();
@@ -111,26 +110,23 @@ export const PricingSection = () => {
               setIsPremium(false);
               setSubscriptionStatus("canceled");
               setIsCheckingOut(false);
-              
+
+              // Notify BotpressWebchat immediately
+              window.dispatchEvent(new CustomEvent('pinky-tier-changed', { detail: { tier: 'free' } }));
+
               setConfirmDialog({
                 isOpen: true,
                 title: "Subscription Cancelled",
                 description: data.message,
+                confirmText: "OK",
+                showCancel: false,
                 onConfirm: () => {
-                    // Forcefully wipe all Botpress conversation history from the browser
-                    for (let i = localStorage.length - 1; i >= 0; i--) {
-                        const key = localStorage.key(i);
-                        if (key && key.startsWith('bp-webchat')) {
-                            localStorage.removeItem(key);
-                        }
-                    }
-                    // Reload the page to drop the user into a brand new chat sequence
-                    window.location.reload();
+                  window.location.reload();
                 },
               });
             } else {
               console.error("Cancellation error:", data.error);
-              
+
               setConfirmDialog({
                 isOpen: true,
                 title: "Cancellation Failed",
@@ -141,7 +137,7 @@ export const PricingSection = () => {
             }
           } catch (error) {
             console.error("Cancellation error:", error);
-            
+
             setConfirmDialog({
               isOpen: true,
               title: "Cancellation Failed",
@@ -189,7 +185,7 @@ export const PricingSection = () => {
       period: "forever",
       description: "Try before you commit",
       features: [
-        { text: "3 questions included", included: true },
+        { text: "7-day free trial", included: true },
         { text: "Basic vetting advice", included: true },
         { text: "Text decode feature", included: true },
         { text: "Pattern library access", included: false },
@@ -345,14 +341,8 @@ export const PricingSection = () => {
       />
 
       <ConfirmDialog
-        isOpen={confirmDialog.isOpen}
+        {...confirmDialog}
         onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
-        onConfirm={confirmDialog.onConfirm}
-        title={confirmDialog.title}
-        description={confirmDialog.description}
-        isDestructive={confirmDialog.isDestructive}
-        confirmText="Confirm"
-        cancelText="Cancel"
       />
     </>
   );

@@ -39,7 +39,7 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
     const [subscriptionEnd, setSubscriptionEnd] = useState<string | number | null>(null);
     const [fullName, setFullName] = useState<string | null>(null);
     const [memberSince, setMemberSince] = useState<string | null>(null);
-    const [newsletterSubscribed, setNewsletterSubscribed] = useState(true);
+    // const [newsletterSubscribed, setNewsletterSubscribed] = useState(true);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -101,7 +101,11 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="bg-[hsl(var(--cream))] border-[hsl(var(--divider))] sm:max-w-[480px] p-0 overflow-hidden">
+            <DialogContent 
+                onInteractOutside={(e) => e.preventDefault()}
+                onEscapeKeyDown={(e) => e.preventDefault()}
+                className="bg-[hsl(var(--cream))] border-[hsl(var(--divider))] sm:max-w-[480px] p-0 overflow-hidden"
+            >
                 <div className="p-5 md:p-6">
                     <DialogHeader className="mb-4">
                         <DialogTitle className="font-serif text-2xl text-[hsl(var(--charcoal))] flex items-center gap-3">
@@ -159,7 +163,7 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
                                 </div>
 
                                 {/* Content & Newsletter */}
-                                <div className="grid grid-cols-1 gap-3">
+                                {/* <div className="grid grid-cols-1 gap-3">
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-2 text-[11px] font-semibold text-[hsl(var(--charcoal))] uppercase tracking-wide">
                                             <Bell className="w-3.5 h-3.5 text-[hsl(var(--gold))]" />
@@ -177,7 +181,7 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
                                             />
                                         </div>
                                     </div>
-                                </div>
+                                </div> */}
 
                                 {/* Secondary Actions */}
                                 <div className="pt-3 border-t border-[hsl(var(--divider))] grid grid-cols-2 gap-2">

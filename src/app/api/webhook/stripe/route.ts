@@ -79,26 +79,27 @@ export async function POST(req: Request) {
                         console.warn(`[Stripe Webhook] Session ${session.id} is missing subscription ID.`);
                     }
 
-                    // Update our own profiles table as the single source of truth
-                    // Ensure we don't overwrite if subscription_end is missing for some reason
-                    const upsertData: any = {
-                        id: userId,
+                    // Use UPDATE (not upsert) to avoid wiping other profile fields like email
+                    // which can cause session issues on production
+                    const updateData: any = {
                         plan: "premium",
                         subscription_status: subscriptionStatus,
                         stripe_customer_id: session.customer as string | null,
                         stripe_subscription_id: session.subscription as string | null,
+                        updated_at: new Date().toISOString(),
                     };
 
                     if (subscriptionEnd) {
-                        upsertData.subscription_end = subscriptionEnd;
+                        updateData.subscription_end = subscriptionEnd;
                     }
 
                     const { error } = await supabaseAdmin
                         .from("profiles")
-                        .upsert(upsertData, { onConflict: "id" });
+                        .update(updateData)
+                        .eq("id", userId);
 
                     if (error) {
-                        console.error("[Stripe Webhook] Supabase upsert error:", error);
+                        console.error("[Stripe Webhook] Supabase update error:", error);
                     } else {
                         console.log(`[Stripe Webhook] Successfully updated user ${userId} to premium. subscriptionEnd: ${subscriptionEnd}`);
                     }
@@ -223,9 +224,9 @@ export async function POST(req: Request) {
         }
 
         case "invoice.paid":
-        case "invoice.payment_succeeded":
-        case "invoice_payment.paid":
-        case "invoice_payment.succeeded": {
+        case "invoice.payment_succeeded": {
+            // NOTE: invoice_payment.paid is intentionally excluded — it has a different object
+            // structure (customer is undefined) and invoice.paid already covers this event.
             const invoice = event.data.object as any;
             console.log(`[Stripe Webhook] Invoice paid (${event.type}): ${invoice.id}, Customer: ${invoice.customer}`);
 
@@ -325,6 +326,8 @@ export async function POST(req: Request) {
         case "invoice.created":
         case "invoice.finalized":
         case "invoice.updated":
+        case "invoice_payment.paid":
+        case "invoice_payment.succeeded":
             // These are standard lifecycle events we don't need to act on specifically, 
             // but we handle them here to keep the logs clean.
             console.log(`[Stripe Webhook] Acknowledged: ${event.type}`);

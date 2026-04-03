@@ -81,7 +81,6 @@ export async function POST(req: Request) {
 
         // Cancel the Stripe subscription immediately
         try {
-            console.log(`Cancelling subscription ${subscriptionId} for user ${userId} immediately`);
             await stripe.subscriptions.cancel(subscriptionId);
             console.log(`Subscription ${subscriptionId} cancelled immediately.`);
         } catch (stripeError: any) {
@@ -130,33 +129,6 @@ export async function POST(req: Request) {
             }
         } else {
             console.log('BOTPRESS_WEBHOOK_URL is not set, skipping Botpress sync.');
-        }
-
-        // --- Nuke All Conversations in Botpress Cloud ---
-        const botpressApiToken = process.env.BOTPRESS_API_TOKEN;
-        const botpressWebhookBotId = process.env.BOTPRESS_BOT_ID || '';
-        const bpHeaders: Record<string, string> = {
-            'Authorization': `Bearer ${botpressApiToken}`,
-            'x-bot-id': botpressWebhookBotId,
-            'Content-Type': 'application/json'
-        };
-
-        if (botpressApiToken) {
-            try {
-                console.log(`[Botpress Server Sync] Attempting to permanently nuke conversations: ${botpressConversationIds.length}`);
-                
-                for (const convId of botpressConversationIds) {
-                    const bpRes = await fetch(
-                        `https://api.botpress.cloud/v1/chat/conversations/${convId}`,
-                        { method: 'DELETE', headers: bpHeaders }
-                    );
-                    if (bpRes.ok) {
-                         console.log(`[Botpress Sync] Nuked Botpress conversation on cloud: ${convId}`);
-                    }
-                }
-            } catch (err) {
-                console.error('[Botpress Sync] Error deleting Botpress conversations:', err);
-            }
         }
 
         return NextResponse.json({

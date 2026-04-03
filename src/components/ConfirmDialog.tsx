@@ -19,6 +19,7 @@ interface ConfirmDialogProps {
     confirmText?: string;
     cancelText?: string;
     isDestructive?: boolean;
+    showCancel?: boolean;
 }
 
 export const ConfirmDialog = ({
@@ -30,6 +31,7 @@ export const ConfirmDialog = ({
     confirmText = "Confirm",
     cancelText = "Cancel",
     isDestructive = false,
+    showCancel = true,
 }: ConfirmDialogProps) => {
     const handleConfirm = () => {
         onConfirm();
@@ -38,7 +40,11 @@ export const ConfirmDialog = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="bg-[hsl(var(--cream))] border-[hsl(var(--divider))] sm:max-w-[425px]">
+            <DialogContent 
+                onInteractOutside={(e) => e.preventDefault()}
+                onEscapeKeyDown={(e) => e.preventDefault()}
+                className="bg-[hsl(var(--cream))] border-[hsl(var(--divider))] sm:max-w-[425px]"
+            >
                 <DialogHeader>
                     <DialogTitle className="font-serif text-xl text-[hsl(var(--charcoal))]">
                         {title}
@@ -47,20 +53,22 @@ export const ConfirmDialog = ({
                         {description}
                     </DialogDescription>
                 </DialogHeader>
-                <DialogFooter className="gap-2 sm:gap-0">
-                    <Button
-                        variant="ghost"
-                        onClick={onClose}
-                        className="text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--charcoal))]"
-                    >
-                        {cancelText}
-                    </Button>
+                <DialogFooter className={`gap-2 sm:gap-0 ${!showCancel ? "flex justify-center" : ""}`}>
+                    {showCancel && (
+                        <Button
+                            variant="ghost"
+                            onClick={onClose}
+                            className="text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--charcoal))]"
+                        >
+                            {cancelText}
+                        </Button>
+                    )}
                     <Button
                         onClick={handleConfirm}
                         className={
-                            isDestructive
+                            `px-8 ${isDestructive
                                 ? "bg-red-600 hover:bg-red-700 text-white"
-                                : "bg-[hsl(var(--charcoal))] hover:bg-[hsl(var(--charcoal))]/90 text-white"
+                                : "bg-[hsl(var(--charcoal))] hover:bg-[hsl(var(--charcoal))]/90 text-white"}`
                         }
                     >
                         {confirmText}
