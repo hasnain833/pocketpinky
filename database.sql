@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   plan TEXT DEFAULT 'free',
   subscription_status TEXT,
   subscription_end TIMESTAMPTZ,
+  trial_end_date TIMESTAMPTZ,      -- set to created_at + 7 days on signup
   stripe_customer_id TEXT,
   stripe_subscription_id TEXT,
   auth_provider TEXT,
@@ -38,7 +39,8 @@ BEGIN
     email, 
     full_name, 
     plan, 
-    subscription_status, 
+    subscription_status,
+    trial_end_date,
     created_at, 
     updated_at,
     auth_provider
@@ -48,7 +50,8 @@ BEGIN
     NEW.email, 
     COALESCE(NEW.raw_user_meta_data->>'full_name', 'User'), 
     'free', 
-    NULL, 
+    NULL,
+    NOW() + INTERVAL '7 days',
     NOW(), 
     NOW(),
     NEW.app_metadata->>'provider'

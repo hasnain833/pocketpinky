@@ -39,6 +39,7 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
     const [subscriptionEnd, setSubscriptionEnd] = useState<string | number | null>(null);
     const [fullName, setFullName] = useState<string | null>(null);
     const [memberSince, setMemberSince] = useState<string | null>(null);
+    const [messageCredits, setMessageCredits] = useState<number>(0);
     // const [newsletterSubscribed, setNewsletterSubscribed] = useState(true);
 
     useEffect(() => {
@@ -56,7 +57,7 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
                 // Load plan and subscription details from profiles table (single source of truth)
                 const { data: profile } = await supabase
                     .from("profiles")
-                    .select("plan, subscription_status, subscription_end, full_name, created_at")
+                    .select("plan, message_credits, subscription_status, subscription_end, full_name, created_at")
                     .eq("id", session.user.id)
                     .maybeSingle();
 
@@ -66,13 +67,22 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
                 }
 
                 const userPlan = (profile?.plan as string | undefined) || "free";
-                setPlan(userPlan === "premium" ? "Premium" : "Free");
+                const planLabels: Record<string, string> = {
+                    "free": "Free",
+                    "user-500": "500 Message Pack",
+                    "user-1000": "1000 Message Pack",
+                    "premium": "Premium",
+                    "ultra_premium": "Ultra Premium",
+                };
+                setPlan(planLabels[userPlan] ?? "Free");
 
                 const status = (profile?.subscription_status as string | undefined) || "active";
                 setSubscriptionStatus(status);
 
                 const end = profile?.subscription_end ?? null;
                 setSubscriptionEnd(end);
+
+                setMessageCredits(profile?.message_credits || 0);
             }
             setLoading(false);
         });
@@ -80,14 +90,20 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
 
     // Determine display status
     const getStatusDisplay = () => {
-        if (plan === "Free") return { text: "None", color: "text-[hsl(var(--text-muted))]" };
+        if (plan === "Free") {
+            // Show trial status for free users
+            if (subscriptionStatus === "expired") return { text: "Trial Expired", color: "text-red-600" };
+            return { text: "Trial (7 days)", color: "text-blue-500" };
+        }
+        if (plan === "Ultra Premium") return { text: "Lifetime Access", color: "text-[hsl(var(--gold))]" };
+        if (plan === "500 Message Pack" || plan === "1000 Message Pack") {
+            return { text: "Active", color: "text-green-600" };
+        }
 
         if (subscriptionEnd) {
             const now = new Date();
             const expiry = new Date(subscriptionEnd);
-            if (now > expiry) {
-                return { text: "Expired", color: "text-red-600" };
-            }
+            if (now > expiry) return { text: "Expired", color: "text-red-600" };
         }
 
         if (subscriptionStatus === "active") return { text: "Active", color: "text-green-600" };
@@ -145,7 +161,7 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
                                             <span className="text-[hsl(var(--text-secondary))]">Status</span>
                                             <span className={`font-medium ${statusDisplay.color}`}>{statusDisplay.text}</span>
                                         </div>
-                                        {plan !== "Free" && subscriptionEnd && (
+                                        {plan !== "Free" && plan !== "Ultra Premium" && plan !== "500 Message Pack" && plan !== "1000 Message Pack" && subscriptionEnd && (
                                             <div className="flex justify-between p-2.5">
                                                 <span className="text-[hsl(var(--text-secondary)) px-0]">
                                                     {subscriptionStatus === "canceled" ? "Expires on" : "Renews on"}
@@ -156,6 +172,14 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
                                                         month: 'short',
                                                         day: 'numeric'
                                                     })}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {messageCredits > 0 && (
+                                            <div className="flex justify-between p-2.5">
+                                                <span className="text-[hsl(var(--text-secondary))]">Message Pack Credits</span>
+                                                <span className="font-medium text-[hsl(var(--gold))]">
+                                                    {messageCredits.toLocaleString()} available
                                                 </span>
                                             </div>
                                         )}

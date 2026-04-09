@@ -13,6 +13,7 @@ declare global {
         pinkyUserEmail: string | undefined;
         pinkyUserId: string | undefined;
         pinkySubscriptionTier: string | undefined;
+        pinkyMessageCredits: number | undefined;
     }
 }
 
@@ -140,7 +141,9 @@ export const BotpressWebchat = () => {
     useEffect(() => {
         const handler = async (e: CustomEvent) => {
             const newTier = e.detail?.tier ?? 'free';
+            const messageCredits = e.detail?.messageCredits ?? 0;
             window.pinkySubscriptionTier = newTier;
+            window.pinkyMessageCredits = messageCredits;
             lastSyncedTier.current = null;
 
             const bp = window.botpressWebChat || window.botpressWebchat || window.botpress;
@@ -153,12 +156,14 @@ export const BotpressWebchat = () => {
                         externalId: user.id,
                         email: user.email,
                         subscriptionTier: newTier,
+                        messageCredits: messageCredits,
                         lastUpdated: timestamp,
                     },
                     tags: {
                         email: user.email,
                         userId: user.id,
                         subscriptionTier: newTier,
+                        messageCredits: messageCredits,
                         lastUpdated: timestamp,
                     },
                 });
@@ -197,7 +202,8 @@ export const BotpressWebchat = () => {
             try {
                 const res = await fetch(`/api/check-subscription?userId=${encodeURIComponent(user.id)}`);
                 const data = await res.json();
-                const currentTier = data?.plan || 'free';
+                const currentTier = data?.tier || 'free';
+                const messageCredits = data?.message_credits || 0;
 
                 const previousTier = localStorage.getItem('pinky_last_tier');
                 if (previousTier && previousTier !== currentTier) {
@@ -206,6 +212,7 @@ export const BotpressWebchat = () => {
                 }
 
                 window.pinkySubscriptionTier = currentTier;
+                window.pinkyMessageCredits = messageCredits;
 
                 if (lastSyncedTier.current !== currentTier) {
                     bp.updateUser({
@@ -213,12 +220,14 @@ export const BotpressWebchat = () => {
                             externalId: user.id,
                             email: user.email,
                             subscriptionTier: currentTier,
+                            messageCredits: messageCredits,
                             lastUpdated: new Date().toISOString()
                         },
                         tags: {
                             email: user.email,
                             userId: user.id,
                             subscriptionTier: currentTier,
+                            messageCredits: messageCredits,
                             lastUpdated: new Date().toISOString()
                         }
                     });
@@ -244,6 +253,7 @@ export const BotpressWebchat = () => {
                 var email = window.pinkyUserEmail;
                 var userId = window.pinkyUserId;
                 var tier = window.pinkySubscriptionTier || 'free';
+                var credits = window.pinkyMessageCredits || 0;
 
                 const searchParams = new URLSearchParams(window.location.search);
                 const isSuccess = (searchParams.get('success') === 'true') || window.pinkyIsSuccess;
@@ -252,8 +262,8 @@ export const BotpressWebchat = () => {
                     // console.log('[Pinky] Webchat Initialized. Identity:', email || 'Guest');
                     if (email && userId) {
                         bp.updateUser({
-                            data: { email: email, externalId: userId, subscriptionTier: tier, lastUpdated: new Date().toISOString() },
-                            tags: { email: email, userId: userId, subscriptionTier: tier, lastUpdated: new Date().toISOString() }
+                            data: { email: email, externalId: userId, subscriptionTier: tier, messageCredits: credits, lastUpdated: new Date().toISOString() },
+                            tags: { email: email, userId: userId, subscriptionTier: tier, messageCredits: credits, lastUpdated: new Date().toISOString() }
                         });
                     }
                     

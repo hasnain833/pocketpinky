@@ -27,7 +27,19 @@ const PRICES = {
         amount: 2497, // $24.97
         mode: "subscription" as const,
         priceId: process.env.STRIPE_PREMIUM_PRICE_ID,
-    }
+    },
+    "user-500": {
+        name: "500 Message Pack",
+        amount: 5000, // $50.00
+        mode: "payment" as const,
+        priceId: undefined as string | undefined,
+    },
+    "user-1000": {
+        name: "1000 Message Pack",
+        amount: 8000, // $80.00
+        mode: "payment" as const,
+        priceId: undefined as string | undefined,
+    },
 };
 
 export async function POST(req: Request) {
@@ -49,7 +61,6 @@ export async function POST(req: Request) {
         const startUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
         const product = PRICES[productId as keyof typeof PRICES];
 
-        // For subscriptions, it's safer to use Price IDs from Stripe Dashboard
         const lineItem = product.priceId ? {
             price: product.priceId,
             quantity: 1,
@@ -70,60 +81,83 @@ export async function POST(req: Request) {
 
         let stripeCustomerId: string | undefined;
 
-        // Try to find existing customer by email
         if (userEmail) {
-            const customers = await stripe.customers.list({
-                email: userEmail,
-                limit: 1,
-            });
-
+            const customers = await stripe.customers.list({ email: userEmail, limit: 1 });
             if (customers.data.length > 0) {
                 stripeCustomerId = customers.data[0].id;
             } else {
-                // Create new customer if not found
-                const customer = await stripe.customers.create({
-                    email: userEmail,
-                    metadata: {
-                        supabaseUserId: userId,
-                    },
-                });
+                const customer = await stripe.customers.create({ email: userEmail, metadata: { supabaseUserId: userId } });
                 stripeCustomerId = customer.id;
             }
         }
-
-        console.log(`[Stripe Checkout] Creating session for User: ${userId} (${userEmail})`, {
-            productId,
-            stripeCustomerId,
-            mode: product.mode,
-            priceId: product.priceId
-        });
 
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ["card"],
             line_items: [lineItem],
             mode: product.mode,
             customer: stripeCustomerId,
-            customer_update: {
-                address: "auto",
-            },
-            success_url: product.mode === "subscription"
-                ? `${startUrl}/?session_id={CHECKOUT_SESSION_ID}&success=true`
-                : `${startUrl}/guides/success?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: product.mode === "subscription"
-                ? `${startUrl}/#pricing`
-                : `${startUrl}/guides`,
-            client_reference_id: String(userId), // Critical for mapping to the user in webhook
-            metadata: {
-                productId: String(productId),
-                userId: String(userId),
-            },
+            customer_update: { address: "auto" },
+            success_url: `${startUrl}/?session_id={CHECKOUT_SESSION_ID}&success=true`,
+            cancel_url: product.mode === "subscription" ? `${startUrl}/#pricing` : startUrl,
+            client_reference_id: String(userId),
+            metadata: { productId: String(productId), userId: String(userId) },
         });
 
         return NextResponse.json({ url: session.url });
     } catch (err: any) {
         console.error("Error creating checkout session:", err);
-        // Log the detailed Stripe error if available
-        if (err.raw) console.error("Stripe Raw Error:", err.raw);
+        return NextResponse.json({ error: err.message }, { status: 500 });
+    }
+}
+
+// Support for direct links (GET) from Botpress
+export async function GET(req: Request) {
+    try {
+        const { searchParams } = new URL(req.url);
+        const productId = searchParams.get("productId");
+        const userId = searchParams.get("userId");
+
+        if (!productId || !userId || !PRICES[productId as keyof typeof PRICES]) {
+            return NextResponse.json({ error: "Missing or invalid productId/userId" }, { status: 400 });
+        }
+
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-01-28.clover" });
+        const { createAdminClient } = await import("@/lib/supabase/admin");
+        const supabaseAdmin = createAdminClient();
+        const { data: profile } = await supabaseAdmin.from("profiles").select("email, stripe_customer_id").eq("id", userId).maybeSingle();
+
+        if (!profile) return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+
+        const product = PRICES[productId as keyof typeof PRICES];
+        const startUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+        let stripeCustomerId = profile.stripe_customer_id;
+        if (!stripeCustomerId && profile.email) {
+            const customers = await stripe.customers.list({ email: profile.email, limit: 1 });
+            stripeCustomerId = customers.data[0]?.id || (await stripe.customers.create({ email: profile.email, metadata: { supabaseUserId: userId } })).id;
+        }
+
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ["card"],
+            line_items: [{
+                price_data: {
+                    currency: "usd",
+                    product_data: { name: product.name },
+                    unit_amount: product.amount,
+                },
+                quantity: 1,
+            }],
+            mode: product.mode,
+            customer: stripeCustomerId,
+            customer_update: { address: "auto" },
+            success_url: `${startUrl}/?session_id={CHECKOUT_SESSION_ID}&success=true`,
+            cancel_url: startUrl,
+            client_reference_id: String(userId),
+            metadata: { productId: String(productId), userId: String(userId) },
+        });
+
+        return session.url ? NextResponse.redirect(session.url) : NextResponse.json({ error: "No URL" }, { status: 500 });
+    } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }

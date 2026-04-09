@@ -40,6 +40,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = "login" }: AuthModalP
     const [error, setError] = useState<string | null>(null);
     const [message, setMessage] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [form, setForm] = useState({
         name: "",
         email: "",
@@ -113,7 +114,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = "login" }: AuthModalP
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent 
+            <DialogContent
                 onInteractOutside={(e) => e.preventDefault()}
                 onEscapeKeyDown={(e) => e.preventDefault()}
                 className="bg-[hsl(var(--cream))] border-[hsl(var(--divider))] sm:max-w-[450px] p-0 overflow-hidden"
@@ -212,15 +213,24 @@ export const AuthModal = ({ isOpen, onClose, initialMode = "login" }: AuthModalP
                                 {isSignup && (
                                     <div className="space-y-1">
                                         <Label htmlFor="modal-confirm" className="text-[11px] uppercase tracking-wider font-semibold text-[hsl(var(--text-muted))]">Confirm Password</Label>
-                                        <Input
-                                            id="modal-confirm"
-                                            type="password"
-                                            placeholder="••••••••"
-                                            required
-                                            value={form.confirmPassword}
-                                            onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-                                            className="bg-white border-[hsl(var(--divider))] h-9 text-sm"
-                                        />
+                                        <div className="relative">
+                                            <Input
+                                                id="modal-confirm"
+                                                type={showConfirmPassword ? "text" : "password"}
+                                                placeholder="••••••••"
+                                                required
+                                                value={form.confirmPassword}
+                                                onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                                                className="bg-white border-[hsl(var(--divider))] pr-10 h-9 text-sm"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(var(--text-muted))]"
+                                            >
+                                                {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                            </button>
+                                        </div>
                                         {form.confirmPassword.length > 0 && !passwordsMatch && (
                                             <p className="text-[10px] text-red-500">Passwords don&apos;t match</p>
                                         )}

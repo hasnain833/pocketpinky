@@ -4,12 +4,15 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+// All tiers that grant chatbot access beyond free trial
+const PAID_TIERS = ["premium", "ultra_premium"];
+
+// Free trial: 7 days from account creation
+const TRIAL_DAYS = 7;
+
 export async function GET(req: Request) {
     try {
-        const { searchParams } = new URL(req.url);
-        // We ignore email/userId now and always use the current session user
         const supabase = await createClient();
-
         const { data: { user }, error: userError } = await supabase.auth.getUser();
 
         if (userError) {
@@ -17,53 +20,84 @@ export async function GET(req: Request) {
         }
 
         if (!user) {
-            // No authenticated user: treat as free
             return NextResponse.json({
                 plan: "free",
+                tier: "free",
+                message_credits: 0,
                 isSubscribed: false,
+                trialActive: false,
                 trialExpired: true,
             }, { status: 401 });
         }
 
-        // Use profiles.plan as single source of truth for THIS user
         const { data: profile, error } = await supabase
             .from("profiles")
-            .select("plan, subscription_end")
+            .select("plan, message_credits, subscription_status, subscription_end, created_at")
             .eq("id", user.id)
             .maybeSingle();
-
-        // console.log(`[Subscription API] DB Response for ${user.id}:`, { profile, error });
 
         if (error) {
             console.error("check-subscription profiles error:", error);
             return NextResponse.json({
                 plan: "free",
+                tier: "free",
+                message_credits: 0,
                 isSubscribed: false,
+                trialActive: false,
                 trialExpired: true,
             }, { status: 500 });
         }
 
         const rawPlan = (profile?.plan as string | undefined) || "free";
+        const messageCredits = profile?.message_credits || 0;
         const subscriptionEnd = profile?.subscription_end;
+        const createdAt = profile?.created_at;
 
         let plan = rawPlan.toLowerCase();
-        let isSubscribed = plan === "premium";
-        if (isSubscribed && subscriptionEnd) {
+
+        // ── Trial check (free users only) ─────────────────────────────────────────
+        let trialActive = false;
+        let trialExpired = true;
+
+        if (plan === "free" && createdAt) {
+            const trialEnd = new Date(createdAt);
+            trialEnd.setDate(trialEnd.getDate() + TRIAL_DAYS);
+            const now = new Date();
+
+            if (now <= trialEnd) {
+                trialActive = true;
+                trialExpired = false;
+            }
+        }
+
+        // ── Subscription expiry check (premium only) ──────────────────────────────
+        let isSubscribed = PAID_TIERS.includes(plan);
+
+        if (plan === "premium" && subscriptionEnd) {
             const now = new Date();
             const expiry = new Date(subscriptionEnd);
-
             if (now > expiry) {
-                // console.log(`[Subscription API] User ${user.id} has expired (End: ${subscriptionEnd}). Overriding status to 'free'.`);
+                // Subscription lapsed — treat as free
                 plan = "free";
                 isSubscribed = false;
+                trialExpired = true;
             }
+        }
+
+        // ultra_premium is lifetime — never expires
+        if (plan === "ultra_premium") {
+            isSubscribed = true;
+            trialExpired = false;
         }
 
         return NextResponse.json({
             plan,
-            isSubscribed: isSubscribed,
-            trialExpired: isSubscribed ? false : true,
-            subscription_end: subscriptionEnd
+            tier: plan,          // explicit alias for Botpress clarity
+            message_credits: messageCredits,
+            isSubscribed,
+            trialActive,
+            trialExpired: isSubscribed ? false : trialExpired,
+            subscription_end: subscriptionEnd ?? null,
         });
 
     } catch (error: any) {
