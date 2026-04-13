@@ -12,6 +12,7 @@ const TRIAL_DAYS = 7;
 
 export async function GET(req: Request) {
     try {
+        /* ORIGINAL LOGIC COMMENTED OUT FOR TESTING
         const supabase = await createClient();
         const { data: { user }, error: userError } = await supabase.auth.getUser();
 
@@ -98,6 +99,18 @@ export async function GET(req: Request) {
             trialActive,
             trialExpired: isSubscribed ? false : trialExpired,
             subscription_end: subscriptionEnd ?? null,
+        });
+        */
+
+        // BYPASS ACTIVE: Returning Ultra Premium for testing
+        return NextResponse.json({
+            plan: "ultra_premium",
+            tier: "ultra_premium",
+            message_credits: 999999,
+            isSubscribed: true,
+            trialActive: true,
+            trialExpired: false,
+            subscription_end: null,
         });
 
     } catch (error: any) {

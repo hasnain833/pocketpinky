@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(req: Request) {
     try {
+        /* ORIGINAL LOGIC COMMENTED OUT FOR TESTING
         const body = await req.json();
         const { userId, totalUsed } = body;
 
@@ -48,6 +49,14 @@ export async function POST(req: Request) {
             success: true,
             action: "credits_exhausted",
             message: "Message credits have been zeroed out successfully.",
+        });
+        */
+
+        // BYPASS ACTIVE: Credit system is currently disabled for testing
+        return NextResponse.json({
+            success: true,
+            action: "credits_exhausted_bypassed",
+            message: "Credit system is disabled. No records were changed.",
         });
 
     } catch (err: any) {

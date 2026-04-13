@@ -155,15 +155,15 @@ export const BotpressWebchat = () => {
                     data: {
                         externalId: user.id,
                         email: user.email,
-                        subscriptionTier: newTier,
-                        messageCredits: messageCredits,
+                        // subscriptionTier: newTier, // Commented out for testing
+                        // messageCredits: messageCredits, // Commented out for testing
                         lastUpdated: timestamp,
                     },
                     tags: {
                         email: user.email,
                         userId: user.id,
-                        subscriptionTier: newTier,
-                        messageCredits: messageCredits,
+                        // subscriptionTier: newTier, // Commented out for testing
+                        // messageCredits: messageCredits, // Commented out for testing
                         lastUpdated: timestamp,
                     },
                 });
@@ -219,15 +219,15 @@ export const BotpressWebchat = () => {
                         data: {
                             externalId: user.id,
                             email: user.email,
-                            subscriptionTier: currentTier,
-                            messageCredits: messageCredits,
+                            subscriptionTier: currentTier, // Commented out for testing
+                            // messageCredits: messageCredits, // Commented out for testing
                             lastUpdated: new Date().toISOString()
                         },
                         tags: {
                             email: user.email,
                             userId: user.id,
-                            subscriptionTier: currentTier,
-                            messageCredits: messageCredits,
+                            subscriptionTier: currentTier, // Commented out for testing
+                            // messageCredits: messageCredits, // Commented out for testing
                             lastUpdated: new Date().toISOString()
                         }
                     });
@@ -262,8 +262,20 @@ export const BotpressWebchat = () => {
                     // console.log('[Pinky] Webchat Initialized. Identity:', email || 'Guest');
                     if (email && userId) {
                         bp.updateUser({
-                            data: { email: email, externalId: userId, subscriptionTier: tier, messageCredits: credits, lastUpdated: new Date().toISOString() },
-                            tags: { email: email, userId: userId, subscriptionTier: tier, messageCredits: credits, lastUpdated: new Date().toISOString() }
+                            data: { 
+                                email: email, 
+                                externalId: userId, 
+                                // subscriptionTier: tier, // Commented out for testing
+                                // messageCredits: credits, // Commented out for testing
+                                lastUpdated: new Date().toISOString() 
+                            },
+                            tags: { 
+                                email: email, 
+                                userId: userId, 
+                                // subscriptionTier: tier, // Commented out for testing 
+                                // messageCredits: credits, // Commented out for testing
+                                lastUpdated: new Date().toISOString() 
+                            }
                         });
                     }
                     
