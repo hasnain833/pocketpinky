@@ -23,7 +23,7 @@ A custom-trained AI bot that lives in a boutique editorial chat widget.
 - **Session Sync**: Deep integration between the website user state and bot memory.
 
 ### 2. Premium Ecosystem
-- **Pinky Premium**: Monthly subscription for unlimited AI coaching.
+- **Pinky Premium**: Monthly subscription for AI coaching.
 - **Digital Guides**: Single-purchase PDFs for deep dives into dating psychology.
 - **Smart Paywalls**: Automatic context-aware links based on user account status.
 
