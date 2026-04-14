@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Script from "next/script";
+import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 declare global {
@@ -17,9 +18,15 @@ declare global {
 }
 
 export const BotpressWebchat = () => {
+    const pathname = usePathname();
     const [user, setUser] = useState<any>(null);
     const configUrl = process.env.NEXT_PUBLIC_BOTPRESS_CONFIG_SCRIPT_URL;
     const lastSyncedTier = useRef<string | null>(null);
+
+    // Hide on specific pages (authentication, callback, etc.)
+    if (pathname?.startsWith("/auth")) {
+        return null;
+    }
 
     useEffect(() => {
         const supabase = createClient();
