@@ -12,15 +12,21 @@ const TRIAL_DAYS = 7;
 
 export async function GET(req: Request) {
     try {
-        /* ORIGINAL LOGIC COMMENTED OUT FOR TESTING
         const supabase = await createClient();
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        const { searchParams } = new URL(req.url);
+        const queryUserId = searchParams.get("userId");
 
-        if (userError) {
-            console.error("check-subscription getUser error:", userError);
+        let targetUserId = queryUserId;
+
+        // If no userId in query, try to get from session
+        if (!targetUserId) {
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
+            if (user) {
+                targetUserId = user.id;
+            }
         }
 
-        if (!user) {
+        if (!targetUserId) {
             return NextResponse.json({
                 plan: "free",
                 tier: "free",
@@ -34,7 +40,7 @@ export async function GET(req: Request) {
         const { data: profile, error } = await supabase
             .from("profiles")
             .select("plan, message_credits, subscription_status, subscription_end, created_at")
-            .eq("id", user.id)
+            .eq("id", targetUserId)
             .maybeSingle();
 
         if (error) {
@@ -99,18 +105,6 @@ export async function GET(req: Request) {
             trialActive,
             trialExpired: isSubscribed ? false : trialExpired,
             subscription_end: subscriptionEnd ?? null,
-        });
-        */
-
-        // BYPASS ACTIVE: Returning Ultra Premium for testing
-        return NextResponse.json({
-            plan: "ultra_premium",
-            tier: "ultra_premium",
-            message_credits: 999999,
-            isSubscribed: true,
-            trialActive: true,
-            trialExpired: false,
-            subscription_end: null,
         });
 
     } catch (error: any) {
