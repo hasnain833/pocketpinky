@@ -36,6 +36,7 @@ export const BotpressWebchat = () => {
     const [user, setUser] = useState<User | null>(null);
     const configUrl = process.env.NEXT_PUBLIC_BOTPRESS_CONFIG_SCRIPT_URL;
     const lastSyncedTier = useRef<string | null>(null);
+    const prevUserId = useRef<string | null>(null);
 
     useEffect(() => {
         const supabase = createClient();
@@ -259,6 +260,25 @@ export const BotpressWebchat = () => {
         return () => clearInterval(interval);
     }, [user, pathname]);
 
+    useEffect(() => {
+        if (pathname?.startsWith("/auth")) return;
+        
+        const currentUserId = user?.id ?? null;
+        
+        // If the user ID actually changed (including login/logout)
+        if (prevUserId.current !== currentUserId) {
+            const previousId = prevUserId.current;
+            prevUserId.current = currentUserId;
+            
+            // Only reset if we're switching FROM one user TO another
+            // (not on the very first load)
+            if (previousId !== null || currentUserId !== null) {
+                console.log(`[Pinky] Identity switch detected: ${previousId} -> ${currentUserId}. Purging Botpress cache...`);
+                clearBotpressSession();
+            }
+        }
+    }, [user, pathname]);
+
     const initBotpressSettings = `
         var checkBotpress = setInterval(function() {
             var bp = window.botpressWebChat || window.botpressWebchat || window.botpress;
@@ -333,6 +353,56 @@ export const BotpressWebchat = () => {
             }
         }, 300);
     `;
+
+    const clearBotpressSession = () => {
+        console.log('[Pinky] Starting Botpress session purge...');
+        // 1. Clear Botpress localStorage keys
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (
+                key.startsWith('bp/') ||
+                key.startsWith('botpress') ||
+                key.includes('webchat') ||
+                key.includes('conversation') ||
+                key.includes('userId')
+            )) {
+                keysToRemove.push(key);
+            }
+        }
+        console.log(`[Pinky] Removing ${keysToRemove.length} localStorage keys...`);
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+
+        // 2. Clear Botpress sessionStorage keys
+        const sessionKeysToRemove: string[] = [];
+        for (let i = 0; i < sessionStorage.length; i++) {
+            const key = sessionStorage.key(i);
+            if (key && (
+                key.startsWith('bp/') ||
+                key.startsWith('botpress') ||
+                key.includes('webchat')
+            )) {
+                sessionKeysToRemove.push(key);
+            }
+        }
+        console.log(`[Pinky] Removing ${sessionKeysToRemove.length} sessionStorage keys...`);
+        sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key));
+
+        // 3. Reset lastSyncedTier so it re-syncs for the new user
+        lastSyncedTier.current = null;
+
+        // 4. Force reload the Botpress widget iframe to get a clean session
+        const bpIframe = document.querySelector<HTMLIFrameElement>(
+            'iframe[id*="botpress"], iframe[src*="botpress"], iframe[src*="cdn.botpress"]'
+        );
+        if (bpIframe && bpIframe.src) {
+            console.log('[Pinky] Hard reloading Botpress widget iframe...');
+            const src = bpIframe.src;
+            bpIframe.src = '';
+            setTimeout(() => { bpIframe.src = src; }, 100);
+        }
+        console.log('[Pinky] Botpress session purge complete.');
+    };
 
     if (!configUrl || pathname?.startsWith("/auth")) return null;
 
