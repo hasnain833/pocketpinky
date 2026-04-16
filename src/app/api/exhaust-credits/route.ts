@@ -50,8 +50,8 @@ export async function POST(req: Request) {
             message: "Message credits have been zeroed out successfully.",
         });
 
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error("[Exhaust Credits] Unexpected error:", err);
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        return NextResponse.json({ error: err instanceof Error ? err.message : "Internal error" }, { status: 500 });
     }
 }

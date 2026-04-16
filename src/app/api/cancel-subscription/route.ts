@@ -102,7 +102,8 @@ export async function POST(req: Request) {
                 subscription_status: 'canceled',
                 subscription_end: null,
                 cancel_at_period_end: false,
-                stripe_subscription_id: null
+                stripe_subscription_id: null,
+                message_credits: 0
             })
             .eq('id', userId);
 

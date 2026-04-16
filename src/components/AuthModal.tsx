@@ -30,12 +30,12 @@ function checkPasswordRequirements(password: string) {
 interface AuthModalProps {
     isOpen: boolean;
     onClose: () => void;
-    initialMode?: "login" | "signup";
+    initialMode?: "login" | "signup" | "forgot-password";
 }
 
 export const AuthModal = ({ isOpen, onClose, initialMode = "login" }: AuthModalProps) => {
     const router = useRouter();
-    const [mode, setMode] = useState<"login" | "signup">(initialMode);
+    const [mode, setMode] = useState<"login" | "signup" | "forgot-password">(initialMode);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [message, setMessage] = useState<string | null>(null);
@@ -175,7 +175,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = "login" }: AuthModalP
                                 </div>
                                 {!isForgotPassword && (
                                     <div className="space-y-1">
-                                        <Label htmlFor="modal-password" dangerouslySetInnerHTML={{ __html: 'Password' }} className="text-[11px] uppercase tracking-wider font-semibold text-[hsl(var(--text-muted))]" />
+                                        <Label htmlFor="modal-password" className="text-[11px] uppercase tracking-wider font-semibold text-[hsl(var(--text-muted))]">Password</Label>
                                         <div className="relative">
                                             <Input
                                                 id="modal-password"
@@ -276,7 +276,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = "login" }: AuthModalP
                                         {!isSignup && (
                                             <div className="mt-2">
                                                 <button
-                                                    onClick={() => setMode("forgot-password" as any)}
+                                                    onClick={() => setMode("forgot-password")}
                                                     className="text-[hsl(var(--text-muted))] hover:text-[hsl(var(--pink-accent))] transition-colors"
                                                 >
                                                     Forgot Password?

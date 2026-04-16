@@ -2,8 +2,6 @@
 import { motion } from "framer-motion";
 
 export const HeroSection = () => {
-  const chatbotUrl = "https://cdn.botpress.cloud/webchat/v3.5/shareable.html?configUrl=https://files.bpcontent.cloud/2025/12/22/20/20251222201454-LHAZEGXE.json";
-
   const contentVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -80,7 +78,7 @@ export const HeroSection = () => {
 
             {/* Note */}
             <motion.p variants={itemVariants} className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-widest">
-              No signup required. Start instantly.
+              Create an account and start chatting instantly.
             </motion.p>
           </motion.div>
 

@@ -9,6 +9,12 @@ import type { User as AuthUser } from "@supabase/supabase-js";
 import { AuthModal } from "./AuthModal";
 import { AccountModal } from "./AccountModal";
 
+interface BotpressInstance {
+  restart?: () => void;
+  resetState?: () => void;
+  sendEvent?: (event: { type: string; payload?: unknown }) => void;
+}
+
 export const Header = () => {
   const router = useRouter();
   const pathname = usePathname();
@@ -34,8 +40,9 @@ export const Header = () => {
     });
 
     // Listen for global auth modal triggers
-    const handleOpenAuth = (e: any) => {
-      const mode = e.detail?.mode || "login";
+    const handleOpenAuth = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      const mode = detail?.mode || "login";
       setAuthModal({ isOpen: true, mode });
     };
 
@@ -56,7 +63,7 @@ export const Header = () => {
 
 
     try {
-      const bp: any = (window as any).botpressWebChat || (window as any).botpressWebchat || (window as any).botpress;
+      const bp = (window.botpressWebChat || window.botpressWebchat || window.botpress) as BotpressInstance | undefined;
       if (bp) {
         try {
           localStorage.removeItem('bp:webchat:conversationId');
@@ -71,12 +78,16 @@ export const Header = () => {
           } else if (typeof bp.resetState === 'function') {
             bp.resetState();
           } else {
-            bp.sendEvent && bp.sendEvent({ type: 'webchat:reset' });
+            if (bp.sendEvent) {
+              bp.sendEvent({ type: 'webchat:reset' });
+            }
           }
         } catch {
+          // ignore reset errors
         }
       }
     } catch {
+      // ignore botpress instance access errors
     }
 
     window.location.href = "/";
@@ -202,3 +213,4 @@ export const Header = () => {
     </>
   );
 };
+

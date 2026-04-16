@@ -69,9 +69,6 @@ export async function handleSignUp({
         const protocol = host?.includes("localhost") ? "http" : "https";
         const origin = `${protocol}://${host}`;
 
-        console.log('SignUp request for:', email);
-        console.log('Detected origin:', origin);
-
         // 1. Create the user first with email confirmation disabled
         const { data: userData, error: createError } = await supabase.auth.admin.createUser({
             email,
@@ -115,9 +112,6 @@ export async function handleSignUp({
 
         const confirmLink = `${origin}/auth/callback?token_hash=${token_hash}&type=signup`;
 
-        console.log('Token hash flow used');
-        console.log('Action link generated successfully');
-
         // 3. Send email via Brevo SMTP
         if (!process.env.BREVO_SMTP_KEY || !process.env.BREVO_SMTP_USER) {
             throw new Error('Brevo SMTP credentials not configured (BREVO_SMTP_USER & BREVO_SMTP_KEY)');
@@ -156,18 +150,17 @@ export async function handleSignUp({
             ]
         });
 
-        console.log('[Signup] Attempting to send confirmation email via Brevo to:', email);
-        console.log('[Signup] Brevo response:', sendResult);
+        console.log('[Signup] Confirmation email sent successfully:', sendResult);
 
         return { success: true, message: "Check your email for the confirmation link." };
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error('[Signup] Error occurred:', err);
-        return { success: false, error: err.message || "Something went wrong." };
+        const errorMessage = err instanceof Error ? err.message : "Something went wrong.";
+        return { success: false, error: errorMessage };
     }
 }
 
 export async function sendPaymentConfirmationEmail(email: string, productId: string = "premium") {
-    console.log('[PaymentEmail] Starting to send confirmation email for:', email, 'Product:', productId);
     try {
         if (!process.env.BREVO_SMTP_KEY || !process.env.BREVO_SMTP_USER) {
             throw new Error('Brevo SMTP credentials not configured');
@@ -177,8 +170,8 @@ export async function sendPaymentConfirmationEmail(email: string, productId: str
             premium: {
                 subject: "Welcome to Premium | Pinky Pill",
                 title: "Access Granted.",
-                body: "Your Premium subscription is now active. You have full, unlimited access to Pinky Pill's entire ecosystem.",
-                features: ["Ask unlimited questions", "Access all vetting modes", "Explore the 49 Pattern Library", "Use Swirling Mode for IR expertise"]
+                body: "Your Premium subscription is now active. You have full access to Pinky Pill's vetting modes.",
+                features: ["Ask unlimited questions", "Access all vetting modes", "Get instant verdicts on patterns"]
             },
             patterns: {
                 subject: "Your 49 Patterns Guide | Pinky Pill",
@@ -216,8 +209,8 @@ export async function sendPaymentConfirmationEmail(email: string, productId: str
                     ${template.body}
                 </p>
                 <div style="text-align: center; margin: 35px 0;">
-                    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://pinkypill.com'}" style="display: inline-block; background-color: ${COLORS.charcoal}; color: ${COLORS.cream}; padding: 18px 36px; text-decoration: none; border-radius: 2px; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 2px; transition: all 0.3s;">
-                        Start Reading
+                    <a href="${process.env.NEXT_PUBLIC_APP_URL}" style="display: inline-block; background-color: ${COLORS.charcoal}; color: ${COLORS.cream}; padding: 18px 36px; text-decoration: none; border-radius: 2px; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 2px; transition: all 0.3s;">
+                        ${productId === 'premium' ? 'Start Chatting' : 'Start Reading'}
                     </a>
                 </div>
                 <p style="font-size: 14px; color: #4a4a4a;">
@@ -233,18 +226,18 @@ export async function sendPaymentConfirmationEmail(email: string, productId: str
             attachments: [
                 {
                     filename: 'pinky.png',
-                    path: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/logos/pinky.png`,
+                    path: `${process.env.NEXT_PUBLIC_APP_URL}/logos/pinky.png`,
                     cid: 'logo'
                 }
             ]
         };
 
         const result = await transporter.sendMail(mailOptions);
-        console.log('[PaymentEmail] Confirmation email sent successfully:', result);
         return { success: true };
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error('[PaymentEmail] Error sending confirmation email:', err);
-        return { success: false, error: err.message };
+        const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+        return { success: false, error: errorMessage };
     }
 }
 
@@ -255,8 +248,6 @@ export async function handleResetPassword(email: string) {
         const host = headersList.get("host") || "";
         const protocol = host?.includes("localhost") ? "http" : "https";
         const origin = `${protocol}://${host}`;
-
-        console.log('Password reset request for:', email);
 
         // 1. Generate the recovery link via admin.generateLink
         const { data, error: linkError } = await supabase.auth.admin.generateLink({
@@ -324,8 +315,9 @@ export async function handleResetPassword(email: string) {
         console.log('Brevo response:', sendResult);
 
         return { success: true, message: "Check your email for the password reset link." };
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error('Reset password error:', err);
-        return { success: false, error: err.message || "Something went wrong." };
+        const errorMessage = err instanceof Error ? err.message : "Something went wrong.";
+        return { success: false, error: errorMessage };
     }
 }

@@ -91,8 +91,22 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
     // Determine display status
     const getStatusDisplay = () => {
         if (plan === "Free") {
-            // Show trial status for free users
-            if (subscriptionStatus === "expired") return { text: "Trial Expired", color: "text-red-600" };
+            // Show trial status for free users calculated from memberSince
+            if (memberSince) {
+                const createdAt = new Date(memberSince);
+                const expiryDate = new Date(createdAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+                const now = new Date();
+                
+                if (now > expiryDate) {
+                    return { text: "Trial Expired", color: "text-red-600" };
+                } else {
+                    const diffTime = Math.abs(expiryDate.getTime() - now.getTime());
+                    const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    return { text: `Trial (${daysLeft} days left)`, color: "text-blue-500" };
+                }
+            } else if (subscriptionStatus === "expired") {
+                return { text: "Trial Expired", color: "text-red-600" };
+            }
             return { text: "Trial (7 days)", color: "text-blue-500" };
         }
         if (plan === "Ultra Premium") return { text: "Lifetime Access", color: "text-[hsl(var(--gold))]" };
@@ -175,7 +189,7 @@ export const AccountModal = ({ isOpen, onClose, onSignOut }: AccountModalProps) 
                                                 </span>
                                             </div>
                                         )}
-                                        {messageCredits > 0 && (
+                                        {plan !== "Free" && messageCredits > 0 && (
                                             <div className="flex justify-between p-2.5">
                                                 <span className="text-[hsl(var(--text-secondary))]">Message Pack Credits</span>
                                                 <span className="font-medium text-[hsl(var(--gold))]">

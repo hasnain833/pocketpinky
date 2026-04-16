@@ -107,8 +107,8 @@ export async function GET(req: Request) {
             subscription_end: subscriptionEnd ?? null,
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Check subscription error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error occurred" }, { status: 500 });
     }
 }

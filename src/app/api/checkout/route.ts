@@ -104,9 +104,9 @@ export async function POST(req: Request) {
         });
 
         return NextResponse.json({ url: session.url });
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error("Error creating checkout session:", err);
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        return NextResponse.json({ error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
     }
 }
 
@@ -157,7 +157,7 @@ export async function GET(req: Request) {
         });
 
         return session.url ? NextResponse.redirect(session.url) : NextResponse.json({ error: "No URL" }, { status: 500 });
-    } catch (err: any) {
-        return NextResponse.json({ error: err.message }, { status: 500 });
+    } catch (err: unknown) {
+        return NextResponse.json({ error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
     }
 }

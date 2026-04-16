@@ -213,6 +213,7 @@ export async function POST(req: Request) {
                         plan: "free",
                         subscription_status: null,
                         subscription_end: null,
+                        message_credits: 0,
                     }).eq("id", profile.id);
 
                     console.log(`[Stripe Webhook] Reverted ${profile.id} to free`);

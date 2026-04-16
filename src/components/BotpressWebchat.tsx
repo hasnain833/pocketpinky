@@ -2,38 +2,46 @@
 
 import { useEffect, useState, useRef } from "react";
 import Script from "next/script";
+import { toast } from "sonner";
 import { usePathname } from "next/navigation";
+import type { User, Session } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+
+interface BotpressInstance {
+    open?: () => void;
+    close?: () => void;
+    sendEvent?: (event: { type: string; payload?: unknown }) => void;
+    sendPayload?: (event: { type: string; payload?: unknown }) => void;
+    updateUser?: (options: { data: Record<string, unknown>; tags: Record<string, unknown> }) => Promise<void>;
+    on?: (event: string, callback: (payload?: unknown) => void) => void;
+    configure?: (config: Record<string, unknown>) => void;
+}
 
 declare global {
     interface Window {
-        botpressWebChat: any;
-        botpressWebchat: any;
-        botpress: any;
+        botpressWebChat?: BotpressInstance;
+        botpressWebchat?: BotpressInstance;
+        botpress?: BotpressInstance;
         isPinkyAuthenticated: boolean;
         pinkyUserEmail: string | undefined;
         pinkyUserId: string | undefined;
         pinkySubscriptionTier: string | undefined;
         pinkyMessageCredits: number | undefined;
+        pinkyIsSuccess?: boolean;
     }
 }
 
 export const BotpressWebchat = () => {
     const pathname = usePathname();
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<User | null>(null);
     const configUrl = process.env.NEXT_PUBLIC_BOTPRESS_CONFIG_SCRIPT_URL;
     const lastSyncedTier = useRef<string | null>(null);
 
-    // Hide on specific pages (authentication, callback, etc.)
-    if (pathname?.startsWith("/auth")) {
-        return null;
-    }
-
     useEffect(() => {
         const supabase = createClient();
-        if (!supabase) return;
+        if (!supabase || pathname?.startsWith("/auth")) return;
 
-        const updateIdentity = (session: any) => {
+        const updateIdentity = (session: Session | null) => {
             const isAuth = !!session;
             const currentUser = session?.user ?? null;
 
@@ -49,13 +57,14 @@ export const BotpressWebchat = () => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => updateIdentity(session));
 
         return () => subscription.unsubscribe();
-    }, []);
+    }, [pathname]);
 
     // GUEST SHIELD: Blocks clicks for unauthenticated users
     useEffect(() => {
+        if (pathname?.startsWith("/auth")) return;
         const shieldId = 'pinky-chat-shield';
         const updateShield = () => {
-            const isAuth = (window as any).isPinkyAuthenticated;
+            const isAuth = window.isPinkyAuthenticated;
             let shield = document.getElementById(shieldId);
 
             if (!isAuth) {
@@ -88,12 +97,13 @@ export const BotpressWebchat = () => {
             clearInterval(interval);
             document.getElementById(shieldId)?.remove();
         };
-    }, [user]);
+    }, [user, pathname]);
 
     useEffect(() => {
+        if (pathname?.startsWith("/auth")) return;
         let retryCount = 0;
         const handler = () => {
-            const bp = window.botpressWebChat || window.botpressWebchat || window.botpress;
+            const bp = window.botpressWebChat ?? window.botpressWebchat ?? window.botpress;
 
             if (!window.isPinkyAuthenticated) {
                 window.dispatchEvent(new CustomEvent('open-auth-modal', { detail: { mode: 'login' } }));
@@ -105,8 +115,10 @@ export const BotpressWebchat = () => {
                     bp.open();
                 } else if (bp.sendEvent || bp.sendPayload) {
                     const send = bp.sendEvent || bp.sendPayload;
-                    send({ type: 'show' });
-                    setTimeout(() => send({ type: 'open' }), 50);
+                    if (send) {
+                        send({ type: 'show' });
+                        setTimeout(() => send({ type: 'open' }), 50);
+                    }
                 }
                 retryCount = 0;
             } else if (retryCount < 5) {
@@ -117,25 +129,25 @@ export const BotpressWebchat = () => {
 
         window.addEventListener('open-pinky-chat', handler);
         return () => window.removeEventListener('open-pinky-chat', handler);
-    }, [user]);
+    }, [user, pathname]);
 
     useEffect(() => {
+        if (pathname?.startsWith("/auth")) return;
         const searchParams = new URLSearchParams(window.location.search);
         const isSuccess = searchParams.get('success') === 'true';
         const sessionId = searchParams.get('session_id');
 
         // Store globally so the init script can see them even after URL cleanup
-        if (isSuccess) (window as any).pinkyIsSuccess = true;
+        if (isSuccess) window.pinkyIsSuccess = true;
 
         if (isSuccess && sessionId) {
-            const { toast } = require("sonner");
             toast.success("Welcome to Premium!", {
                 description: "Your account is now active. Refreshing chat...",
                 duration: 5000,
             });
 
-            const bp = window.botpressWebChat || window.botpressWebchat || window.botpress;
-            if (bp && bp.sendEvent) {
+            const bp = window.botpressWebChat ?? window.botpressWebchat ?? window.botpress;
+            if (bp?.sendEvent) {
                 bp.sendEvent({ type: 'hide' });
                 if (bp.close) bp.close();
             }
@@ -143,34 +155,32 @@ export const BotpressWebchat = () => {
             const newUrl = window.location.pathname;
             window.history.replaceState({}, '', newUrl);
         }
-    }, []);
+    }, [pathname]);
 
     useEffect(() => {
-        const handler = async (e: CustomEvent) => {
-            const newTier = e.detail?.tier ?? 'free';
-            const messageCredits = e.detail?.messageCredits ?? 0;
+        if (pathname?.startsWith("/auth")) return;
+        const handler = async (e: Event) => {
+            const detail = (e as CustomEvent).detail;
+            const newTier = detail?.tier ?? 'free';
+            const messageCredits = detail?.messageCredits ?? 0;
             window.pinkySubscriptionTier = newTier;
             window.pinkyMessageCredits = messageCredits;
             lastSyncedTier.current = null;
 
-            const bp = window.botpressWebChat || window.botpressWebchat || window.botpress;
-            if (!bp || !user) return;
+            const bp = window.botpressWebChat ?? window.botpressWebchat ?? window.botpress;
+            if (!bp || !user || !bp.updateUser) return;
 
             const timestamp = new Date().toISOString();
             try {
                 await bp.updateUser({
                     data: {
                         externalId: user.id,
-                        email: user.email,
-                        // subscriptionTier: newTier, // Commented out for testing
-                        // messageCredits: messageCredits, // Commented out for testing
+                        email: user.email || '',
                         lastUpdated: timestamp,
                     },
                     tags: {
-                        email: user.email,
+                        email: user.email || '',
                         userId: user.id,
-                        // subscriptionTier: newTier, // Commented out for testing
-                        // messageCredits: messageCredits, // Commented out for testing
                         lastUpdated: timestamp,
                     },
                 });
@@ -194,13 +204,14 @@ export const BotpressWebchat = () => {
             }
         };
 
-        window.addEventListener('pinky-tier-changed', handler as EventListener);
-        return () => window.removeEventListener('pinky-tier-changed', handler as EventListener);
-    }, [user]);
+        window.addEventListener('pinky-tier-changed', handler);
+        return () => window.removeEventListener('pinky-tier-changed', handler);
+    }, [user, pathname]);
 
     useEffect(() => {
+        if (pathname?.startsWith("/auth")) return;
         const syncUser = async () => {
-            const bp = window.botpressWebChat || window.botpressWebchat || window.botpress;
+            const bp = window.botpressWebChat ?? window.botpressWebchat ?? window.botpress;
             if (!bp || !user) {
                 window.pinkySubscriptionTier = 'free';
                 return;
@@ -221,20 +232,18 @@ export const BotpressWebchat = () => {
                 window.pinkySubscriptionTier = currentTier;
                 window.pinkyMessageCredits = messageCredits;
 
-                if (lastSyncedTier.current !== currentTier) {
+                if (lastSyncedTier.current !== currentTier && bp.updateUser) {
                     bp.updateUser({
                         data: {
                             externalId: user.id,
-                            email: user.email,
-                            subscriptionTier: currentTier, // Commented out for testing
-                            // messageCredits: messageCredits, // Commented out for testing
+                            email: user.email || '',
+                            subscriptionTier: currentTier, 
                             lastUpdated: new Date().toISOString()
                         },
                         tags: {
-                            email: user.email,
+                            email: user.email || '',
                             userId: user.id,
-                            subscriptionTier: currentTier, // Commented out for testing
-                            // messageCredits: messageCredits, // Commented out for testing
+                            subscriptionTier: currentTier, 
                             lastUpdated: new Date().toISOString()
                         }
                     });
@@ -248,7 +257,7 @@ export const BotpressWebchat = () => {
         syncUser();
         const interval = setInterval(syncUser, 120000);
         return () => clearInterval(interval);
-    }, [user]);
+    }, [user, pathname]);
 
     const initBotpressSettings = `
         var checkBotpress = setInterval(function() {
@@ -325,7 +334,7 @@ export const BotpressWebchat = () => {
         }, 300);
     `;
 
-    if (!configUrl) return null;
+    if (!configUrl || pathname?.startsWith("/auth")) return null;
 
     return (
         <div style={{ display: 'contents' }}>

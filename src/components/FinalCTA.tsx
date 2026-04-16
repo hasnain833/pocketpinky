@@ -8,7 +8,7 @@ export const FinalCTA = () => {
                     Ready to Stop Guessing and <em className="text-[hsl(var(--pink-accent))] italic">Start Knowing</em>?
                 </h2>
                 <p className="text-white/70 mb-8 text-lg">
-                    Your first conversation with Pinky is free. No signup, no credit card.
+                    Your first conversation with Pinky is free. Create an account and start chatting.
                 </p>
                 <button
                     onClick={() => window.dispatchEvent(new CustomEvent('open-pinky-chat'))}

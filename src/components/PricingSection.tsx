@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { AuthModal } from "./AuthModal";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -11,13 +12,20 @@ import { ScrollReveal } from "./ScrollReveal";
 type PlanKey = "free" | "premium" | "ultra_premium";
 
 const PLAN_LABEL: Record<PlanKey, string> = {
-  free:          "Free",
-  premium:       "Premium",
+  free: "Free",
+  premium: "Premium",
   ultra_premium: "Ultra Premium",
 };
 
+interface CtaState {
+  label: string;
+  disabled: boolean;
+  onClick: () => void;
+  destructive?: boolean;
+}
+
 export const PricingSection = () => {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [authModal, setAuthModal] = useState<{ isOpen: boolean; mode: "login" | "signup" }>({
     isOpen: false,
     mode: "signup"
@@ -148,7 +156,7 @@ export const PricingSection = () => {
   };
 
   const isUltraPremium = currentPlan === "ultra_premium";
-  const isPremium      = currentPlan === "premium";
+  const isPremium = currentPlan === "premium";
 
   // 500 / 1000 packs visible ONLY to premium subscribers
   const showPacks = isPremium || isUltraPremium;
@@ -237,11 +245,26 @@ export const PricingSection = () => {
 
   const cardVariants = {
     hidden: { opacity: 0, y: 50 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.21, 0.47, 0.32, 0.98] as any } },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.21, 0.47, 0.32, 0.98] } },
   };
 
-  const getCtaState = (planId: string) => {
-    if (planId === "free") return { label: "Start Free", disabled: false, onClick: () => window.dispatchEvent(new CustomEvent("open-pinky-chat")) };
+  const getCtaState = (planId: string): CtaState => {
+    // 1. If user is Ultra Premium, everything else is redundant
+    if (isUltraPremium) {
+      if (planId === "premium") {
+        return { label: "Active (Lifetime)", disabled: true, onClick: () => { } };
+      }
+      return { label: "Unlimited Access", disabled: true, onClick: () => { } };
+    }
+
+    // 2. Free Trial logic
+    if (planId === "free") {
+      return {
+        label: user ? "Access Granted" : "Start Free",
+        disabled: !!user,
+        onClick: () => window.dispatchEvent(new CustomEvent("open-pinky-chat"))
+      };
+    }
 
     const isOwned = planId === "premium" && (isPremium || isUltraPremium);
 
@@ -257,11 +280,11 @@ export const PricingSection = () => {
     if (planId === "user-500" || planId === "user-1000") {
       if (messageCredits > 0) {
         // Find if this specific pack amount is what they currently have (roughly)
-        const isThisPack = (planId === "user-500" && messageCredits >= 450) || (planId === "user-1000" && messageCredits >= 950);
-        return { 
-          label: isThisPack ? "Purchased ✓" : "Credits Active", 
-          disabled: true, 
-          onClick: () => { } 
+        const isThisPack = (planId === "user-500" && messageCredits >= 450 && messageCredits < 950) || (planId === "user-1000" && messageCredits >= 950);
+        return {
+          label: isThisPack ? "Purchased ✓" : "Credits Active",
+          disabled: true,
+          onClick: () => { }
         };
       }
       return { label: isCheckingOut ? "Processing…" : plans.find(p => p.id === planId)?.cta ?? "Buy", disabled: isCheckingOut, onClick: () => handleCheckout(planId) };
@@ -292,9 +315,8 @@ export const PricingSection = () => {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
-            className={`grid grid-cols-1 sm:grid-cols-2 gap-6 mx-auto ${
-              plans.length === 4 ? "lg:grid-cols-4 max-w-[1100px]" : "lg:grid-cols-2 max-w-[700px]"
-            }`}
+            className={`grid grid-cols-1 sm:grid-cols-2 gap-6 mx-auto ${plans.length === 4 ? "lg:grid-cols-4 max-w-[1100px]" : "lg:grid-cols-2 max-w-[700px]"
+              }`}
           >
             {plans.map((plan) => {
               const cta = getCtaState(plan.id);
@@ -352,7 +374,7 @@ export const PricingSection = () => {
                   <button
                     onClick={cta.onClick}
                     disabled={cta.disabled}
-                    className={`${(cta as any).destructive
+                    className={`${cta.destructive
                       ? "bg-red-600 hover:bg-red-700 text-white border-red-600"
                       : plan.featured
                         ? "btn-primary"
@@ -368,7 +390,7 @@ export const PricingSection = () => {
 
           <ScrollReveal delay={0.4}>
             <div className="text-center mt-12 text-sm text-[hsl(var(--text-muted))]">
-              One-time packs never expire. Premium renews monthly — cancel anytime.
+              Cancel at any time. No hidden charges.
             </div>
           </ScrollReveal>
         </div>

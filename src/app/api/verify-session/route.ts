@@ -27,8 +27,8 @@ export async function GET(req: Request) {
             status: session.payment_status,
             productId: session.metadata?.productId,
         });
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error("Error verifying Stripe session:", err);
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        return NextResponse.json({ error: err instanceof Error ? err.message : "Verification error" }, { status: 500 });
     }
 }
