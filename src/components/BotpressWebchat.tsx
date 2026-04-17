@@ -38,10 +38,8 @@ export const BotpressWebchat = () => {
     const lastSyncedTier = useRef<string | null>(null);
     const prevUserId = useRef<string | null>(null);
 
-    // Hide on specific pages (authentication, callback, etc.)
-    if (pathname?.startsWith("/auth")) {
-        return null;
-    }
+    // REMOVED early return to comply with Rules of Hooks
+    // All specific logic below already handles the /auth path check individually.
 
     useEffect(() => {
         const supabase = createClient();
@@ -194,9 +192,6 @@ export const BotpressWebchat = () => {
             } catch (err) {
                 console.error('[Pinky] bp.updateUser failed:', err);
             }
-
-            // The Silent Trigger: Tells Botpress to re-read the tags 
-            // WITHOUT opening the widget or showing a message
             try {
                 if (bp.sendEvent) {
                     bp.sendEvent({
@@ -409,7 +404,8 @@ export const BotpressWebchat = () => {
         console.log('[Pinky] Botpress session purge complete.');
     };
 
-    if (!configUrl || pathname?.startsWith("/auth")) return null;
+    if (!configUrl) return null;
+    if (pathname?.startsWith("/auth")) return null;
 
     return (
         <div style={{ display: 'contents' }}>
