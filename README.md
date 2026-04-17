@@ -28,10 +28,20 @@ A custom-trained AI bot that lives in a boutique editorial chat widget.
 - **Swirling Mode**: Expert interpersonal relationship advice.
 - **Real-time Sync**: Bi-directional communication between the Next.js backend and Botpress via webhooks and user tags.
 
-### 3. Prepaid Message Packs
+### 3. Prepaid Message Packs & Premium Ecosystem
 Premium users can purchase "Boosters" to bypass daily limits:
 - **500 Message Pack ($50)**: One-time purchase, adds to a persistent credit balance.
 - **1,000 Message Pack ($80)**: Best value, bypasses all daily constraints until exhausted.
+
+### 4. Premium Ecosystem
+- **Pinky Premium**: Monthly subscription for AI coaching.
+- **Digital Guides**: Single-purchase PDFs for deep dives into dating psychology.
+- **Smart Paywalls**: Automatic context-aware links based on user account status.
+
+### 5. Automated Workflows
+- **Database Triggers**: Robust signup logic that ensures data integrity.
+- **Stripe Webhooks**: Instant account unlocking and product-specific confirmation emails.
+- **Dynamic Checkouts**: Personalized checkout links that work with or without internal IDs.
 
 ## 📦 Getting Started
 

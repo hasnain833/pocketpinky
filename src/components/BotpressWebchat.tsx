@@ -38,6 +38,11 @@ export const BotpressWebchat = () => {
     const lastSyncedTier = useRef<string | null>(null);
     const prevUserId = useRef<string | null>(null);
 
+    // Hide on specific pages (authentication, callback, etc.)
+    if (pathname?.startsWith("/auth")) {
+        return null;
+    }
+
     useEffect(() => {
         const supabase = createClient();
         if (!supabase || pathname?.startsWith("/auth")) return;
@@ -238,13 +243,13 @@ export const BotpressWebchat = () => {
                         data: {
                             externalId: user.id,
                             email: user.email || '',
-                            subscriptionTier: currentTier, 
+                            subscriptionTier: currentTier,
                             lastUpdated: new Date().toISOString()
                         },
                         tags: {
                             email: user.email || '',
                             userId: user.id,
-                            subscriptionTier: currentTier, 
+                            subscriptionTier: currentTier,
                             lastUpdated: new Date().toISOString()
                         }
                     });
@@ -262,14 +267,14 @@ export const BotpressWebchat = () => {
 
     useEffect(() => {
         if (pathname?.startsWith("/auth")) return;
-        
+
         const currentUserId = user?.id ?? null;
-        
+
         // If the user ID actually changed (including login/logout)
         if (prevUserId.current !== currentUserId) {
             const previousId = prevUserId.current;
             prevUserId.current = currentUserId;
-            
+
             // Only reset if we're switching FROM one user TO another
             // (not on the very first load)
             if (previousId !== null || currentUserId !== null) {
