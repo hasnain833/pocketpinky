@@ -180,11 +180,19 @@ export const BotpressWebchat = () => {
                     data: {
                         externalId: user.id,
                         email: user.email || '',
+                        subscriptionTier: String(newTier),
+                        subscription_tier: String(newTier),
+                        messageCredits: String(messageCredits),
+                        message_credits: String(messageCredits),
                         lastUpdated: timestamp,
                     },
                     tags: {
                         email: user.email || '',
                         userId: user.id,
+                        subscriptionTier: String(newTier),
+                        subscription_tier: String(newTier),
+                        messageCredits: String(messageCredits),
+                        message_credits: String(messageCredits),
                         lastUpdated: timestamp,
                     },
                 });
@@ -238,14 +246,14 @@ export const BotpressWebchat = () => {
                         data: {
                             externalId: user.id,
                             email: user.email || '',
-                            subscriptionTier: currentTier,
-                            lastUpdated: new Date().toISOString()
+                            subscriptionTier: String(currentTier),
+                            messageCredits: String(messageCredits),
                         },
                         tags: {
                             email: user.email || '',
                             userId: user.id,
-                            subscriptionTier: currentTier,
-                            lastUpdated: new Date().toISOString()
+                            subscriptionTier: String(currentTier),
+                            messageCredits: String(messageCredits),
                         }
                     });
                     lastSyncedTier.current = currentTier;
@@ -301,16 +309,14 @@ export const BotpressWebchat = () => {
                             data: { 
                                 email: email, 
                                 externalId: userId, 
-                                // subscriptionTier: tier, // Commented out for testing
-                                // messageCredits: credits, // Commented out for testing
-                                lastUpdated: new Date().toISOString() 
+                                subscriptionTier: String(tier), 
+                                messageCredits: String(credits),
                             },
                             tags: { 
                                 email: email, 
                                 userId: userId, 
-                                // subscriptionTier: tier, // Commented out for testing 
-                                // messageCredits: credits, // Commented out for testing
-                                lastUpdated: new Date().toISOString() 
+                                subscriptionTier: String(tier), 
+                                messageCredits: String(credits),
                             }
                         });
                     }
