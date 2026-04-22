@@ -3,12 +3,9 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export async function POST(req: Request) {
+async function exhaustCredits(userId: string, totalUsed?: number) {
     try {
-        const body = await req.json();
-        const { userId, totalUsed } = body;
-
-        console.log(`[Exhaust Credits] Received request to zero out credits for userId=${userId}. Total Used reported from Botpress: ${totalUsed}`);
+        console.log(`[Exhaust Credits] Received request to zero out credits for userId=${userId}. Total Used reported from Botpress: ${totalUsed ?? 'N/A'}`);
 
         if (!userId) {
             return NextResponse.json({ error: "Missing userId" }, { status: 400 });
@@ -53,5 +50,27 @@ export async function POST(req: Request) {
     } catch (err: unknown) {
         console.error("[Exhaust Credits] Unexpected error:", err);
         return NextResponse.json({ error: err instanceof Error ? err.message : "Internal error" }, { status: 500 });
+    }
+}
+
+export async function GET(req: Request) {
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("userId");
+    const totalUsed = searchParams.get("totalUsed");
+    
+    if (!userId) {
+        return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+    }
+
+    return exhaustCredits(userId, totalUsed ? parseInt(totalUsed) : undefined);
+}
+
+export async function POST(req: Request) {
+    try {
+        const body = await req.json();
+        const { userId, totalUsed } = body;
+        return exhaustCredits(userId, totalUsed);
+    } catch (err) {
+        return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 }
