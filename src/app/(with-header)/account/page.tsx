@@ -199,7 +199,9 @@ export default function AccountPage() {
                                 },
                                 {
                                     label: "Credits Package",
-                                    value: profile?.message_credits,
+                                    value: profile?.message_credits 
+                                        ? `${Math.max(0, profile.message_credits - (profile.credits_used || 0))} / ${profile.message_credits}`
+                                        : "0",
                                     icon: CreditCard,
                                     color: "text-pink-500",
                                     bg: "bg-pink-50"
