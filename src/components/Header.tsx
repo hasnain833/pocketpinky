@@ -7,7 +7,6 @@ import { Menu, X, LogOut, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { User as AuthUser } from "@supabase/supabase-js";
 import { AuthModal } from "./AuthModal";
-import { AccountModal } from "./AccountModal";
 
 interface BotpressInstance {
   restart?: () => void;
@@ -24,7 +23,6 @@ export const Header = () => {
     isOpen: false,
     mode: "login"
   });
-  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -56,7 +54,6 @@ export const Header = () => {
 
   async function handleSignOut() {
     setIsMenuOpen(false);
-    setIsAccountModalOpen(false);
     setUser(null);
     const supabase = createClient();
     if (supabase) await supabase.auth.signOut();
@@ -116,12 +113,12 @@ export const Header = () => {
 
               <div className="flex items-center gap-4">
                 {user ? (
-                  <button
-                    onClick={() => setIsAccountModalOpen(true)}
+                  <Link
+                    href="/account"
                     className="bg-[hsl(var(--charcoal))] text-[hsl(var(--cream))] px-7 py-3 text-xs font-semibold tracking-[0.5px] uppercase rounded-sm hover:bg-[hsl(var(--wine))] transition-colors"
                   >
                     Account
-                  </button>
+                  </Link>
                 ) : (
                   <>
                     <button
@@ -173,15 +170,13 @@ export const Header = () => {
                 </Link>
                 <div className="pt-2">
                   {user ? (
-                    <button
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        setIsAccountModalOpen(true);
-                      }}
-                      className="w-full bg-[hsl(var(--charcoal))] text-[hsl(var(--cream))] px-7 py-4 text-xs font-semibold tracking-[0.5px] uppercase rounded-sm text-center"
+                    <Link
+                      href="/account"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="w-full block bg-[hsl(var(--charcoal))] text-[hsl(var(--cream))] px-7 py-4 text-xs font-semibold tracking-[0.5px] uppercase rounded-sm text-center"
                     >
                       Account
-                    </button>
+                    </Link>
                   ) : (
                     <button
                       onClick={() => {
@@ -204,11 +199,6 @@ export const Header = () => {
         isOpen={authModal.isOpen}
         onClose={() => setAuthModal({ ...authModal, isOpen: false })}
         initialMode={authModal.mode}
-      />
-      <AccountModal
-        isOpen={isAccountModalOpen}
-        onClose={() => setIsAccountModalOpen(false)}
-        onSignOut={handleSignOut}
       />
     </>
   );
