@@ -27,6 +27,7 @@ declare global {
         pinkyUserId: string | undefined;
         pinkySubscriptionTier: string | undefined;
         pinkyMessageCredits: number | undefined;
+        pinkyDailyCount: number | undefined;
         pinkyIsSuccess?: boolean;
     }
 }
@@ -36,11 +37,6 @@ export const BotpressWebchat = () => {
     const [user, setUser] = useState<User | null>(null);
     const configUrl = process.env.NEXT_PUBLIC_BOTPRESS_CONFIG_SCRIPT_URL;
     const lastSyncedTier = useRef<string | null>(null);
-    const prevUserId = useRef<string | null>(null);
-
-    // REMOVED early return to comply with Rules of Hooks
-    // All specific logic below already handles the /auth path check individually.
-
     useEffect(() => {
         const supabase = createClient();
         if (!supabase || pathname?.startsWith("/auth")) return;
@@ -63,7 +59,6 @@ export const BotpressWebchat = () => {
         return () => subscription.unsubscribe();
     }, [pathname]);
 
-    // GUEST SHIELD: Blocks clicks for unauthenticated users
     useEffect(() => {
         if (pathname?.startsWith("/auth")) return;
         const shieldId = 'pinky-chat-shield';
@@ -141,7 +136,6 @@ export const BotpressWebchat = () => {
         const isSuccess = searchParams.get('success') === 'true';
         const sessionId = searchParams.get('session_id');
 
-        // Store globally so the init script can see them even after URL cleanup
         if (isSuccess) window.pinkyIsSuccess = true;
 
         if (isSuccess && sessionId) {
@@ -167,8 +161,10 @@ export const BotpressWebchat = () => {
             const detail = (e as CustomEvent).detail;
             const newTier = detail?.tier ?? 'free';
             const messageCredits = detail?.messageCredits ?? 0;
+            const dailyCount = detail?.dailyCount ?? 0;
             window.pinkySubscriptionTier = newTier;
             window.pinkyMessageCredits = messageCredits;
+            window.pinkyDailyCount = dailyCount;
             lastSyncedTier.current = null;
 
             const bp = window.botpressWebChat ?? window.botpressWebchat ?? window.botpress;
@@ -184,6 +180,8 @@ export const BotpressWebchat = () => {
                         subscription_tier: String(newTier),
                         messageCredits: String(messageCredits),
                         message_credits: String(messageCredits),
+                        dailyCount: String(dailyCount),
+                        daily_message_count: String(dailyCount),
                         lastUpdated: timestamp,
                     },
                     tags: {
@@ -193,6 +191,8 @@ export const BotpressWebchat = () => {
                         subscription_tier: String(newTier),
                         messageCredits: String(messageCredits),
                         message_credits: String(messageCredits),
+                        dailyCount: String(dailyCount),
+                        daily_message_count: String(dailyCount),
                         lastUpdated: timestamp,
                     },
                 });
@@ -204,7 +204,12 @@ export const BotpressWebchat = () => {
                 if (bp.sendEvent) {
                     bp.sendEvent({
                         type: 'trigger',
-                        payload: { action: 'tier_sync', tier: newTier }
+                        payload: {
+                            action: 'tier_sync',
+                            tier: newTier,
+                            dailyCount: dailyCount,
+                            messageCredits: messageCredits
+                        }
                     });
                     console.log(`[Pinky] Silent tier-sync event sent`);
                 }
@@ -231,6 +236,7 @@ export const BotpressWebchat = () => {
                 const data = await res.json();
                 const currentTier = data?.tier || 'free';
                 const messageCredits = data?.message_credits || 0;
+                const dailyCount = data?.daily_message_count || 0;
 
                 const previousTier = localStorage.getItem('pinky_last_tier');
                 if (previousTier && previousTier !== currentTier) {
@@ -240,6 +246,7 @@ export const BotpressWebchat = () => {
 
                 window.pinkySubscriptionTier = currentTier;
                 window.pinkyMessageCredits = messageCredits;
+                window.pinkyDailyCount = dailyCount;
 
                 if (lastSyncedTier.current !== currentTier && bp.updateUser) {
                     bp.updateUser({
@@ -248,12 +255,14 @@ export const BotpressWebchat = () => {
                             email: user.email || '',
                             subscriptionTier: String(currentTier),
                             messageCredits: String(messageCredits),
+                            dailyCount: String(dailyCount),
                         },
                         tags: {
                             email: user.email || '',
                             userId: user.id,
                             subscriptionTier: String(currentTier),
                             messageCredits: String(messageCredits),
+                            dailyCount: String(dailyCount),
                         }
                     });
                     lastSyncedTier.current = currentTier;
@@ -270,20 +279,19 @@ export const BotpressWebchat = () => {
 
     useEffect(() => {
         if (pathname?.startsWith("/auth")) return;
+        if (typeof window === 'undefined') return;
 
-        const currentUserId = user?.id ?? null;
+        const currentUserId = window.pinkyUserId ?? null;
+        const lastUserId = localStorage.getItem('pinky_last_user_id');
 
-        // If the user ID actually changed (including login/logout)
-        if (prevUserId.current !== currentUserId) {
-            const previousId = prevUserId.current;
-            prevUserId.current = currentUserId;
-
-            // Only reset if we're switching FROM one user TO another
-            // (not on the very first load)
-            if (previousId !== null || currentUserId !== null) {
-                console.log(`[Pinky] Identity switch detected: ${previousId} -> ${currentUserId}. Purging Botpress cache...`);
+        if (currentUserId) {
+            if (lastUserId && lastUserId !== "null" && lastUserId !== currentUserId) {
                 clearBotpressSession();
             }
+            localStorage.setItem('pinky_last_user_id', currentUserId);
+        } else if (currentUserId === null && lastUserId && lastUserId !== "null") {
+            clearBotpressSession();
+            localStorage.setItem('pinky_last_user_id', "null");
         }
     }, [user, pathname]);
 
@@ -298,6 +306,7 @@ export const BotpressWebchat = () => {
                 var userId = window.pinkyUserId;
                 var tier = window.pinkySubscriptionTier || 'free';
                 var credits = window.pinkyMessageCredits || 0;
+                var dailyCount = window.pinkyDailyCount || 0;
 
                 const searchParams = new URLSearchParams(window.location.search);
                 const isSuccess = (searchParams.get('success') === 'true') || window.pinkyIsSuccess;
@@ -311,12 +320,14 @@ export const BotpressWebchat = () => {
                                 externalId: userId, 
                                 subscriptionTier: String(tier), 
                                 messageCredits: String(credits),
+                                dailyCount: String(dailyCount),
                             },
                             tags: { 
                                 email: email, 
                                 userId: userId, 
                                 subscriptionTier: String(tier), 
                                 messageCredits: String(credits),
+                                dailyCount: String(dailyCount),
                             }
                         });
                     }
@@ -361,8 +372,6 @@ export const BotpressWebchat = () => {
     `;
 
     const clearBotpressSession = () => {
-        console.log('[Pinky] Starting Botpress session purge...');
-        // 1. Clear Botpress localStorage keys
         const keysToRemove: string[] = [];
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
@@ -376,10 +385,7 @@ export const BotpressWebchat = () => {
                 keysToRemove.push(key);
             }
         }
-        console.log(`[Pinky] Removing ${keysToRemove.length} localStorage keys...`);
         keysToRemove.forEach(key => localStorage.removeItem(key));
-
-        // 2. Clear Botpress sessionStorage keys
         const sessionKeysToRemove: string[] = [];
         for (let i = 0; i < sessionStorage.length; i++) {
             const key = sessionStorage.key(i);
@@ -391,23 +397,16 @@ export const BotpressWebchat = () => {
                 sessionKeysToRemove.push(key);
             }
         }
-        console.log(`[Pinky] Removing ${sessionKeysToRemove.length} sessionStorage keys...`);
         sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key));
-
-        // 3. Reset lastSyncedTier so it re-syncs for the new user
         lastSyncedTier.current = null;
-
-        // 4. Force reload the Botpress widget iframe to get a clean session
         const bpIframe = document.querySelector<HTMLIFrameElement>(
             'iframe[id*="botpress"], iframe[src*="botpress"], iframe[src*="cdn.botpress"]'
         );
         if (bpIframe && bpIframe.src) {
-            console.log('[Pinky] Hard reloading Botpress widget iframe...');
             const src = bpIframe.src;
             bpIframe.src = '';
             setTimeout(() => { bpIframe.src = src; }, 100);
         }
-        console.log('[Pinky] Botpress session purge complete.');
     };
 
     if (!configUrl) return null;

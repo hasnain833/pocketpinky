@@ -39,7 +39,7 @@ export async function GET(req: Request) {
 
         const { data: profile, error } = await supabase
             .from("profiles")
-            .select("plan, message_credits, subscription_status, subscription_end, created_at")
+            .select("plan, message_credits, daily_message_count, subscription_status, subscription_end, created_at")
             .eq("id", targetUserId)
             .maybeSingle();
 
@@ -101,7 +101,8 @@ export async function GET(req: Request) {
             plan,
             tier: plan,          // explicit alias for Botpress clarity
             message_credits: messageCredits,
-            isSubscribed,
+            daily_message_count: profile?.daily_message_count || 0,
+            isSubscribed: isSubscribed,
             trialActive,
             trialExpired: isSubscribed ? false : trialExpired,
             subscription_end: subscriptionEnd ?? null,
