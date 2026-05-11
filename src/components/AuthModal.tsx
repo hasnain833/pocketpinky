@@ -97,11 +97,27 @@ export const AuthModal = ({ isOpen, onClose, initialMode = "login" }: AuthModalP
 
                 setMessage(result.message || "Check your email for the confirmation link.");
             } else {
+                // --- Check admin credentials FIRST (before hitting Supabase) ---
+                const adminRes = await fetch("/api/admin/auth", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: form.email, password: form.password }),
+                });
+                const adminData = await adminRes.json();
+
+                if (adminData.isAdmin) {
+                    onClose();
+                    router.push("/admin");
+                    return;
+                }
+
+                // --- Normal user: proceed with Supabase login ---
                 const { error: signInError } = await supabase.auth.signInWithPassword({
                     email: form.email,
                     password: form.password,
                 });
                 if (signInError) throw signInError;
+
                 onClose();
                 window.location.reload();
             }

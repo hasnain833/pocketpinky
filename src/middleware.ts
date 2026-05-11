@@ -2,6 +2,18 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Protect /admin routes — check for admin_session cookie
+  if (pathname.startsWith("/admin") && !pathname.startsWith("/api/admin/auth")) {
+    const adminSession = request.cookies.get("admin_session");
+    if (!adminSession || adminSession.value !== "authenticated") {
+      // Redirect non-authenticated admin requests to home
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    return NextResponse.next({ request });
+  }
+
   let response = NextResponse.next({ request });
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
@@ -45,3 +57,4 @@ export const config = {
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
+

@@ -39,7 +39,7 @@ export const BotpressWebchat = () => {
     const lastSyncedTier = useRef<string | null>(null);
     useEffect(() => {
         const supabase = createClient();
-        if (!supabase || pathname?.startsWith("/auth")) return;
+        if (!supabase || pathname?.startsWith("/auth") || pathname?.startsWith("/admin")) return;
 
         const updateIdentity = (session: Session | null) => {
             const isAuth = !!session;
@@ -60,7 +60,7 @@ export const BotpressWebchat = () => {
     }, [pathname]);
 
     useEffect(() => {
-        if (pathname?.startsWith("/auth")) return;
+        if (pathname?.startsWith("/auth") || pathname?.startsWith("/admin")) return;
         const shieldId = 'pinky-chat-shield';
         const updateShield = () => {
             const isAuth = window.isPinkyAuthenticated;
@@ -99,7 +99,7 @@ export const BotpressWebchat = () => {
     }, [user, pathname]);
 
     useEffect(() => {
-        if (pathname?.startsWith("/auth")) return;
+        if (pathname?.startsWith("/auth") || pathname?.startsWith("/admin")) return;
         let retryCount = 0;
         const handler = () => {
             const bp = window.botpressWebChat ?? window.botpressWebchat ?? window.botpress;
@@ -131,7 +131,7 @@ export const BotpressWebchat = () => {
     }, [user, pathname]);
 
     useEffect(() => {
-        if (pathname?.startsWith("/auth")) return;
+        if (pathname?.startsWith("/auth") || pathname?.startsWith("/admin")) return;
         const searchParams = new URLSearchParams(window.location.search);
         const isSuccess = searchParams.get('success') === 'true';
         const sessionId = searchParams.get('session_id');
@@ -156,7 +156,7 @@ export const BotpressWebchat = () => {
     }, [pathname]);
 
     useEffect(() => {
-        if (pathname?.startsWith("/auth")) return;
+        if (pathname?.startsWith("/auth") || pathname?.startsWith("/admin")) return;
         const handler = async (e: Event) => {
             const detail = (e as CustomEvent).detail;
             const newTier = detail?.tier ?? 'free';
@@ -223,7 +223,7 @@ export const BotpressWebchat = () => {
     }, [user, pathname]);
 
     useEffect(() => {
-        if (pathname?.startsWith("/auth")) return;
+        if (pathname?.startsWith("/auth") || pathname?.startsWith("/admin")) return;
         const syncUser = async () => {
             const bp = window.botpressWebChat ?? window.botpressWebchat ?? window.botpress;
             if (!bp || !user) {
@@ -278,7 +278,7 @@ export const BotpressWebchat = () => {
     }, [user, pathname]);
 
     useEffect(() => {
-        if (pathname?.startsWith("/auth")) return;
+        if (pathname?.startsWith("/auth") || pathname?.startsWith("/admin")) return;
         if (typeof window === 'undefined') return;
 
         const currentUserId = window.pinkyUserId ?? null;
@@ -410,7 +410,7 @@ export const BotpressWebchat = () => {
     };
 
     if (!configUrl) return null;
-    if (pathname?.startsWith("/auth")) return null;
+    if (pathname?.startsWith("/auth") || pathname?.startsWith("/admin")) return null;
 
     return (
         <div style={{ display: 'contents' }}>
