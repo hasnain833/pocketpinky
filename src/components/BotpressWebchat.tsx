@@ -37,6 +37,7 @@ export const BotpressWebchat = () => {
     const [user, setUser] = useState<User | null>(null);
     const configUrl = process.env.NEXT_PUBLIC_BOTPRESS_CONFIG_SCRIPT_URL;
     const lastSyncedTier = useRef<string | null>(null);
+
     useEffect(() => {
         const supabase = createClient();
         if (!supabase || pathname?.startsWith("/auth") || pathname?.startsWith("/admin")) return;
@@ -61,12 +62,36 @@ export const BotpressWebchat = () => {
 
     useEffect(() => {
         if (pathname?.startsWith("/auth") || pathname?.startsWith("/admin")) return;
+        if (typeof window === 'undefined') return;
+
+        const currentUserId = window.pinkyUserId ?? null;
+        const lastUserId = localStorage.getItem('pinky_last_user_id');
+
+        if (currentUserId) {
+            if (lastUserId && lastUserId !== "null" && lastUserId !== currentUserId) {
+                saveBotpressTokens(lastUserId);
+                restoreBotpressTokens(currentUserId);
+            } else if (!lastUserId || lastUserId === "null") {
+                restoreBotpressTokens(currentUserId);
+            }
+            localStorage.setItem('pinky_last_user_id', currentUserId);
+        }
+    }, [user, pathname]);
+
+    useEffect(() => {
+        if (pathname?.startsWith("/auth") || pathname?.startsWith("/admin")) return;
         const shieldId = 'pinky-chat-shield';
         const updateShield = () => {
             const isAuth = window.isPinkyAuthenticated;
             let shield = document.getElementById(shieldId);
 
             if (!isAuth) {
+                const bp = window.botpressWebChat ?? window.botpressWebchat ?? window.botpress;
+                if (bp) {
+                    if (bp.close) bp.close();
+                    if (bp.sendEvent) bp.sendEvent({ type: 'hide' });
+                }
+
                 if (!shield) {
                     shield = document.createElement('div');
                     shield.id = shieldId;
@@ -277,31 +302,12 @@ export const BotpressWebchat = () => {
         return () => clearInterval(interval);
     }, [user, pathname]);
 
-    useEffect(() => {
-        if (pathname?.startsWith("/auth") || pathname?.startsWith("/admin")) return;
-        if (typeof window === 'undefined') return;
-
-        const currentUserId = window.pinkyUserId ?? null;
-        const lastUserId = localStorage.getItem('pinky_last_user_id');
-
-        if (currentUserId) {
-            if (lastUserId && lastUserId !== "null" && lastUserId !== currentUserId) {
-                clearBotpressSession();
-            }
-            localStorage.setItem('pinky_last_user_id', currentUserId);
-        } else if (currentUserId === null && lastUserId && lastUserId !== "null") {
-            clearBotpressSession();
-            localStorage.setItem('pinky_last_user_id', "null");
-        }
-    }, [user, pathname]);
-
     const initBotpressSettings = `
         var checkBotpress = setInterval(function() {
             var bp = window.botpressWebChat || window.botpressWebchat || window.botpress;
             if (bp) {
                 clearInterval(checkBotpress);
                 
-                // PRE-IDENTITY: If we have user info in window, use it for the very first event
                 var email = window.pinkyUserEmail;
                 var userId = window.pinkyUserId;
                 var tier = window.pinkySubscriptionTier || 'free';
@@ -312,7 +318,6 @@ export const BotpressWebchat = () => {
                 const isSuccess = (searchParams.get('success') === 'true') || window.pinkyIsSuccess;
 
                 bp.on('webchat:initialized', function() {
-                    // console.log('[Pinky] Webchat Initialized. Identity:', email || 'Guest');
                     if (email && userId) {
                         bp.updateUser({
                             data: { 
@@ -333,7 +338,6 @@ export const BotpressWebchat = () => {
                     }
                     
                     if (isSuccess) {
-                        // console.log('[Pinky] Success detected - forcing HIDE');
                         if (bp.sendEvent) bp.sendEvent({ type: 'hide' });
                         if (bp.close) bp.close();
                         setTimeout(function() {
@@ -343,7 +347,6 @@ export const BotpressWebchat = () => {
                 });
 
                 if (typeof bp.on === 'function') {
-                    // Force the conversation list to be enabled if supported via API
                     if (bp.configure) {
                         bp.configure({
                             enableConversationList: true,
@@ -352,15 +355,12 @@ export const BotpressWebchat = () => {
                     }
 
                     bp.on('message', function(payload) {
-                        // console.log('[Pinky] Message received:', payload);
                         setTimeout(function() { bp.sendEvent && bp.sendEvent({ type: 'webchat:scrollToBottom' }); }, 250);
                     });
                 }
 
                 bp.on('webchat:opened', function() {
-                    // console.log('[Pinky] Webchat manually opened');
                     if (!window.isPinkyAuthenticated) {
-                        // console.log('[Pinky] Unauthenticated open detected - blocking');
                         bp.sendEvent && bp.sendEvent({ type: 'close' });
                         window.dispatchEvent(new CustomEvent('open-auth-modal', { 
                             detail: { mode: 'login', message: 'Please log in to chat with Pinky.' }
@@ -371,8 +371,8 @@ export const BotpressWebchat = () => {
         }, 300);
     `;
 
-    const clearBotpressSession = () => {
-        const keysToRemove: string[] = [];
+    const getBotpressKeys = (): string[] => {
+        const keys: string[] = [];
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
             if (key && (
@@ -381,24 +381,34 @@ export const BotpressWebchat = () => {
                 key.includes('webchat') ||
                 key.includes('conversation') ||
                 key.includes('userId')
-            )) {
-                keysToRemove.push(key);
+            ) && !key.startsWith('pinky_')) {
+                keys.push(key);
             }
         }
-        keysToRemove.forEach(key => localStorage.removeItem(key));
-        const sessionKeysToRemove: string[] = [];
-        for (let i = 0; i < sessionStorage.length; i++) {
-            const key = sessionStorage.key(i);
-            if (key && (
-                key.startsWith('bp/') ||
-                key.startsWith('botpress') ||
-                key.includes('webchat')
-            )) {
-                sessionKeysToRemove.push(key);
-            }
-        }
-        sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key));
+        return keys;
+    };
+
+    const saveBotpressTokens = (userId: string) => {
+        const snapshot: Record<string, string> = {};
+        getBotpressKeys().forEach(key => {
+            const val = localStorage.getItem(key);
+            if (val !== null) snapshot[key] = val;
+        });
+        localStorage.setItem(`pinky_bp_snapshot_${userId}`, JSON.stringify(snapshot));
+    };
+
+    const restoreBotpressTokens = (userId: string) => {
+        getBotpressKeys().forEach(key => localStorage.removeItem(key));
         lastSyncedTier.current = null;
+
+        const raw = localStorage.getItem(`pinky_bp_snapshot_${userId}`);
+        if (raw) {
+            try {
+                const snapshot: Record<string, string> = JSON.parse(raw);
+                Object.entries(snapshot).forEach(([key, val]) => localStorage.setItem(key, val));
+            } catch {
+            }
+        }
         const bpIframe = document.querySelector<HTMLIFrameElement>(
             'iframe[id*="botpress"], iframe[src*="botpress"], iframe[src*="cdn.botpress"]'
         );
