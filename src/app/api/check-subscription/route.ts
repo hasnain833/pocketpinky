@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 // All tiers that grant chatbot access beyond free trial
-const PAID_TIERS = ["premium", "ultra_premium"];
+const PAID_TIERS = ["premium", "ultra_premium", "testing"];
 
 // Free trial: 7 days from account creation
 const TRIAL_DAYS = 7;

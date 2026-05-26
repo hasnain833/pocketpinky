@@ -92,6 +92,7 @@ export default function AccountPage() {
         "user-1000": "1000 Message Pack",
         "premium": "Premium Monthly",
         "ultra_premium": "Ultra Premium (Lifetime)",
+        "testing": "Testing Account",
     };
 
     const getStatusDisplay = () => {
@@ -136,7 +137,7 @@ export default function AccountPage() {
 
     // Daily Limit Logic
     const getDailyLimit = () => {
-        if (isUltra) return Infinity;
+        if (isUltra || profile?.plan === 'testing') return Infinity;
         if (isPremium) return 20;
         return 10;
     };
@@ -191,15 +192,15 @@ export default function AccountPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             {[
                                 {
-                                    label: "Daily Usage",
+                                    label: "Daily Messages",
                                     value: `${dailyCount}/${dailyLimit === Infinity ? "∞" : dailyLimit}`,
                                     icon: Zap,
                                     color: "text-amber-500",
                                     bg: "bg-amber-50"
                                 },
                                 {
-                                    label: "Credits Package",
-                                    value: profile?.message_credits 
+                                    label: "Credits Purchased",
+                                    value: profile?.message_credits
                                         ? `${Math.max(0, profile.message_credits - (profile.credits_used || 0))} / ${profile.message_credits}`
                                         : "0",
                                     icon: CreditCard,

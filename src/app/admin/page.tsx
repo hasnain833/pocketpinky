@@ -16,6 +16,7 @@ const PLAN_LABELS: Record<string, { label: string; color: string; bg: string; pr
     ultra_premium: { label: "Ultra", color: "text-amber-400", bg: "bg-amber-500/10", price: 99.00 },
     "user-500": { label: "500 Pack", color: "text-blue-400", bg: "bg-blue-500/10", price: 50.00 },
     "user-1000": { label: "1000 Pack", color: "text-purple-400", bg: "bg-purple-500/10", price: 80.00 },
+    testing: { label: "Testing", color: "text-emerald-400", bg: "bg-emerald-500/10", price: 0 },
 };
 
 function PlanBadge({ plan }: { plan: string }) {
@@ -220,6 +221,7 @@ export default function AdminDashboard() {
                                     >
                                         <option value="all" className="bg-[#16141A]">All Plans</option>
                                         <option value="free" className="bg-[#16141A]">Free</option>
+                                        <option value="testing" className="bg-[#16141A]">Testing</option>
                                         <option value="premium" className="bg-[#16141A]">Premium</option>
                                         <option value="ultra_premium" className="bg-[#16141A]">Ultra</option>
                                     </select>
